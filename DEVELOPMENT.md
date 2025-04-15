@@ -36,7 +36,7 @@ poetry run mypy scribe tests
 
 ## CI
 
-CI which is configured in `.github/workflows/ci.yml` will be triggered on push or pull request to the main branch.
+CI which is configured in [.github/workflows/ci.yml](https://github.com/Seika139/scribe/actions/workflows/ci.yml) will be triggered on push or pull request to the main branch.
 
 ## Git Commit Guidelines
 
