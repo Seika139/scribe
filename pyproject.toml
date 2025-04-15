@@ -2,7 +2,9 @@
 name = "scribe"
 version = "0.1.0"
 description = ""
-authors = [{ name = "Seika", email = "seika@example.com" }]
+authors = [
+    { name = "Seika", email = "33862136+Seika139@users.noreply.github.com" },
+]
 license = { text = "MIT" }
 readme = "README.md"
 requires-python = ">=3.10"
