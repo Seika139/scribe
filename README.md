@@ -56,4 +56,4 @@ See the [LICENSE](LICENSE) file for details.
 
 ## Author
 
-Seika139
+[Seika139](https://github.com/Seika139)
