@@ -19,13 +19,13 @@
 poetry を利用してこのパッケージを利用する場合は以下のコマンドを実行してください。
 
 ```bash
-poetry add git+https://github.com/Seika139/scribe.git
+poetry add git+https://github.com/Seika139/scribe.gitt@main
 ```
 
 ## Usage
 
 ```python
-from scribe import FileScribe
+from scribe.file_scribe import FileScribe
 
 # ファイルを読み込む場合
 file_scribe = FileScribe().read("path/to/file.txt")
