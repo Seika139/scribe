@@ -3,11 +3,15 @@
 ファイルを読み書きする際によく使う処理をまとめたライブラリです。
 複数のエンコーディングを自動判別して読み込む機能や、UTF-8 での書き込みをサポートします。
 
+![License](https://img.shields.io/badge/license-MIT-blue.svg) ![CI](https://github.com/Seika139/scribe/actions/workflows/ci.yml/badge.svg)
+
 ## Installation
 
-GitHub Packages からインストールする場合:
+poetry を利用してこのパッケージを利用する場合は以下のコマンドを実行してください。
 
-<!-- TODO -->
+```bash
+poetry add git+https://github.com/Seika139/scribe.git
+```
 
 ## Usage
 
@@ -47,12 +51,6 @@ print(file_scribe.content) # ファイルの内容を返します (str)
 Issue を報告する際は、具体的な状況と再現手順を記載してください。
 Pull Request を作成する際は、関連する Issue を参照し、変更内容を明確に記述してください。
 コードスタイルは black と flake8 に準拠してください。
-
-## License
-
-MIT License
-
-See the [LICENSE](LICENSE) file for details.
 
 ## Author
 
