@@ -5,7 +5,7 @@
 
 <!-- markdownlint-disable MD033 -->
 
-<div style="text-align: center;">
+<div align="center">
   <a href="./LICENSE">
     <img alt="LICENSE" src="https://img.shields.io/badge/license-MIT-blue.svg">
   </a>
