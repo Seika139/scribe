@@ -3,7 +3,16 @@
 ファイルを読み書きする際によく使う処理をまとめたライブラリです。
 複数のエンコーディングを自動判別して読み込む機能や、UTF-8 での書き込みをサポートします。
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg) ![CI](https://github.com/Seika139/scribe/actions/workflows/ci.yml/badge.svg)
+<!-- markdownlint-disable MD033 -->
+
+<div style="text-align: center;">
+  <a href="./LICENSE">
+    <img alt="LICENSE" src="https://img.shields.io/badge/license-MIT-blue.svg">
+  </a>
+  <a href="https://github.com/Seika139/scribe/actions/workflows/ci.yml">
+    <img alt="CI" src="https://github.com/Seika139/scribe/actions/workflows/ci.yml/badge.svg">
+  </a>
+</div>
 
 ## Installation
 
