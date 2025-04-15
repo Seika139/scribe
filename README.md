@@ -19,7 +19,7 @@
 poetry を利用してこのパッケージを利用する場合は以下のコマンドを実行してください。
 
 ```bash
-poetry add git+https://github.com/Seika139/scribe.gitt@main
+poetry add git+https://github.com/Seika139/scribe.git
 ```
 
 ## Usage
