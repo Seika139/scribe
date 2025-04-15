@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v3
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          poetry install
+      - name: Lint with flake8
+        run: |
+          poetry run flake8 scribe tests
+      - name: Format with black
+        run: |
+          poetry run black --check scribe tests
+      - name: Sort imports with isort
+        run: |
+          poetry run isort --check scribe tests
+      - name: Type check with mypy
+        run: |
+          poetry run mypy scribe tests
+      - name: Run tests with pytest
+        run: |
+          poetry run pytest tests
