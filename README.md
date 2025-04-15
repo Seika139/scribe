@@ -53,13 +53,16 @@ print(file_scribe.encoding) # ファイルのエンコーディングを返し�
 print(file_scribe.content) # ファイルの内容を返します (str)
 ```
 
+## For Developers
+
+See [DEVELOPMENT.md](DEVELOPMENT.md).
+
 ## How to Contribute
 
 貢献は大歓迎です！Issue の報告や Pull Request の作成をお待ちしています。
 
 Issue を報告する際は、具体的な状況と再現手順を記載してください。
 Pull Request を作成する際は、関連する Issue を参照し、変更内容を明確に記述してください。
-コードスタイルは black と flake8 に準拠してください。
 
 ## Author
 
