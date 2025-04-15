@@ -14,27 +14,26 @@ jobs:
         python-version: ["3.9", "3.10", "3.11", "3.12"]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install dependencies
+      - name: Install Poetry
         run: |
           python -m pip install --upgrade pip
-          poetry install
+          pip install poetry
+      - name: Configure Poetry
+        run: poetry config virtualenvs.in-project true
+      - name: Install dependencies
+        run: poetry install
       - name: Lint with flake8
-        run: |
-          poetry run flake8 scribe tests
+        run: poetry run flake8 scribe tests
       - name: Format with black
-        run: |
-          poetry run black --check scribe tests
+        run: poetry run black --check scribe tests
       - name: Sort imports with isort
-        run: |
-          poetry run isort --check scribe tests
+        run: poetry run isort --check scribe tests
       - name: Type check with mypy
-        run: |
-          poetry run mypy scribe tests
+        run: poetry run mypy scribe tests
       - name: Run tests with pytest
-        run: |
-          poetry run pytest tests
+        run: poetry run pytest tests
