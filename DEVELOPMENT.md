@@ -5,17 +5,16 @@
 - `Python`: 3.10 or higher
 - `poetry`: This project uses Poetry for dependency management.
 
+## Recommended Packages
+
+- `make`: Run `make` commands to simplify the development process.
+- `Docker`: Tests can be run in a Docker container.
+
 ## Development Setup
 
 ```bash
 # After cloning the repository
 poetry install --group dev
-```
-
-## Tests
-
-```bash
-poetry run pytest tests
 ```
 
 ## Coding Style
@@ -25,14 +24,20 @@ use `flake8` for linting and `mypy` for type checking.
 
 ```bash
 # formatting
-poetry run isort scribe tests && poetry run black scribe tests
+make format
 
-# linting
-poetry run flake8 scribe tests
-
-# type checking
-poetry run mypy scribe tests
+# linting & type checking
+make check
 ```
+
+## Tests
+
+`make test` run `pytest` in both local and Docker environments.
+If you want to run `pytest` in a Docker container, you can use `make test-docker`.
+If you want to run `pytest` in your local environment, you can use `make test-local`.
+
+After finishing the tests, remove the Docker container with `make down`.
+Also, you can run `make clean` to remove all Docker containers and images.
 
 ## CI
 
