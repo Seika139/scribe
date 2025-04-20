@@ -1,0 +1,45 @@
+name: test_scribe
+
+x-common-build: &common-build
+  volumes:
+    - type: bind
+      source: ..
+      target: /app
+  working_dir: /app
+
+services:
+  python_3_10:
+    <<: *common-build
+    build:
+      context: ..
+      dockerfile: ./Docker/Dockerfile
+      target: tester
+      args:
+        BASE_IMAGE: python:3.10-slim-bookworm
+
+  python_3_11:
+    <<: *common-build
+    build:
+      context: ..
+      dockerfile: ./Docker/Dockerfile
+      target: tester
+      args:
+        BASE_IMAGE: python:3.11-slim-bookworm
+
+  python_3_12:
+    <<: *common-build
+    build:
+      context: ..
+      dockerfile: ./Docker/Dockerfile
+      target: tester
+      args:
+        BASE_IMAGE: python:3.12-slim-bookworm
+
+  python_3_13:
+    <<: *common-build
+    build:
+      context: ..
+      dockerfile: ./Docker/Dockerfile
+      target: tester
+      args:
+        BASE_IMAGE: python:3.13-slim-bookworm
