@@ -1,15 +1,18 @@
+import base64
 import getpass
 import os
 import sys
 import zipfile
 from pathlib import Path
+
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-import base64
 
 
-def generate_key_from_password(password: bytes, salt: bytes | None = None) -> bytes:
+def generate_key_from_password(
+    password: bytes, salt: bytes | None = None
+) -> tuple[bytes, bytes]:
     """パスワードから暗号化キーを生成します。"""
     if salt is None:
         salt = os.urandom(16)
@@ -44,7 +47,6 @@ def decrypt_file(
     f = Fernet(key)
     with open(input_path, "rb") as infile:
         encrypted_data_with_salt = infile.read()
-        retrieved_salt = encrypted_data_with_salt[:16]
         encrypted_data = encrypted_data_with_salt[16:]
     decrypted_data = f.decrypt(encrypted_data)
     with open(output_path, "wb") as outfile:
