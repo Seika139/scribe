@@ -11,7 +11,8 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 
 def generate_key_from_password(
-    password: bytes, salt: bytes | None = None
+    password: bytes,
+    salt: bytes | None = None,
 ) -> tuple[bytes, bytes]:
     """パスワードから暗号化キーを生成します。"""
     if salt is None:
@@ -40,7 +41,10 @@ def encrypt_file(input_path: Path, output_path: Path, password: bytes) -> bytes:
 
 
 def decrypt_file(
-    input_path: Path, output_path: Path, password: bytes, salt: bytes
+    input_path: Path,
+    output_path: Path,
+    password: bytes,
+    salt: bytes,
 ) -> None:
     """暗号化されたファイルを復号化します。"""
     key, _ = generate_key_from_password(password, salt)
@@ -122,7 +126,8 @@ def create_secure_encrypted_zip(target: Path, zip_filename: Path | None = None) 
 
 
 def extract_secure_encrypted_zip(
-    zip_filepath: Path, extract_dir: Path | None = None
+    zip_filepath: Path,
+    extract_dir: Path | None = None,
 ) -> None:
     """
     cryptographyライブラリで暗号化されたZIPファイルを指定したディレクトリに解凍し、復号化します。
