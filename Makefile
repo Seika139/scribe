@@ -18,7 +18,7 @@ format:
 .PHONY: test-local
 test-local:
 	@echo "Running tests in local..."
-	poetry run pytest tests
+	poetry run pytest tests -v
 
 ######################
 # For test in Docker #
