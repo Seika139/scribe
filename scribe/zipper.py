@@ -5,6 +5,7 @@ import sys
 import zipfile
 from pathlib import Path
 
+import pathspec
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
@@ -57,10 +58,42 @@ def decrypt_file(
         outfile.write(decrypted_data)
 
 
+def load_gitignore(directory: Path) -> pathspec.PathSpec | None:
+    """
+    指定されたディレクトリの .gitignore ファイルを読み込み、
+    pathspec.PathSpec オブジェクトを返します。
+    .gitignore が存在しない場合は None を返します。
+    """
+    gitignore_path = directory / ".gitignore"
+    if not gitignore_path.is_file():
+        return None
+
+    with open(gitignore_path, encoding="utf-8") as f:
+        gitignore = pathspec.PathSpec.from_lines(
+            pathspec.patterns.GitWildMatchPattern, f.readlines()
+        )
+    return gitignore
+
+
+def should_ignore_file(
+    path: Path, base_dir: Path, gitignore: pathspec.PathSpec | None
+) -> bool:
+    """
+    指定されたファイルが .gitignore のパターンに一致するかどうかを判定します。
+    """
+    if gitignore is None:
+        return False
+
+    # ファイルパスをbase_dirからの相対パスに変換
+    relative_path = str(path.relative_to(base_dir))
+    return gitignore.match_file(relative_path)
+
+
 def create_secure_encrypted_zip(target: Path, zip_filename: Path | None = None) -> Path:
     """
     指定されたファイルまたはディレクトリを、cryptographyライブラリで暗号化した上でZIPファイルとして作成します。
     出力ZIPファイル名を省略した場合は自動で命名し、既存ファイル名との重複を避けます。
+    .gitignore ファイルが存在する場合は、そのルールに従ってファイルを除外します。
     """
     password_bytes = getpass.getpass("圧縮パスワードを入力してください: ").encode(
         "utf-8"
@@ -99,9 +132,24 @@ def create_secure_encrypted_zip(target: Path, zip_filename: Path | None = None) 
                     f"ファイル '{target}' を '{zip_filename}' にパスワード付きで暗号化・圧縮しました。"
                 )
             elif target.is_dir():
+                # .gitignore の読み込み
+                gitignore = load_gitignore(target)
+                if gitignore:
+                    print(
+                        f".gitignore ファイルを読み込みました: {target / '.gitignore'}"
+                    )
+
                 for root, _, files in os.walk(target):
+                    root_path = Path(root)
                     for file in files:
-                        file_path = Path(root) / file
+                        file_path = root_path / file
+                        # .gitignore と一致するファイルはスキップ
+                        if should_ignore_file(file_path, target, gitignore):
+                            print(
+                                f"除外: {file_path.relative_to(target)} (.gitignore に一致)"
+                            )
+                            continue
+
                         relative_path = file_path.relative_to(target)
                         encrypted_filepath = target / f"{relative_path}.encrypted"
                         encrypted_filepath.parent.mkdir(parents=True, exist_ok=True)
@@ -111,6 +159,7 @@ def create_secure_encrypted_zip(target: Path, zip_filename: Path | None = None) 
                         zf.writestr(str(relative_path) + ".salt", salt)
                         zf.write(encrypted_filepath, str(relative_path) + ".encrypted")
                         os.remove(encrypted_filepath)
+
                 print(
                     f"ディレクトリ '{target}' を '{zip_filename}' にパスワード付きで暗号化・圧縮しました。"
                 )
