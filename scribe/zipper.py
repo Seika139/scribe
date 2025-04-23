@@ -94,7 +94,22 @@ def create_secure_encrypted_zip(target: Path, zip_filename: Path | None = None) 
     指定されたファイルまたはディレクトリを、cryptographyライブラリで暗号化した上でZIPファイルとして作成します。
     出力ZIPファイル名を省略した場合は自動で命名し、既存ファイル名との重複を避けます。
     .gitignore ファイルが存在する場合は、そのルールに従ってファイルを除外します。
+
+    Args:
+        target: 圧縮対象のファイルまたはディレクトリのパス
+        zip_filename: 出力するZIPファイルのパス（省略可能）
+
+    Returns:
+        作成されたZIPファイルのパス
+
+    Raises:
+        FileNotFoundError: 指定されたパスが存在しない場合
+        ValueError: パスワードが一致しない場合、またはパスの種類が不正な場合
+        OSError: ファイルの読み書きに失敗した場合
     """
+    if not target.exists():
+        raise FileNotFoundError(f"指定されたパス '{target}' が見つかりません。")
+
     password_bytes = getpass.getpass("圧縮パスワードを入力してください: ").encode(
         "utf-8"
     )
@@ -103,8 +118,7 @@ def create_secure_encrypted_zip(target: Path, zip_filename: Path | None = None) 
     ).encode("utf-8")
 
     if password_bytes != password_confirm_bytes:
-        print("エラー: 入力されたパスワードが一致しません。")
-        sys.exit(1)
+        raise ValueError("エラー: パスワードが一致しません。")
 
     if zip_filename is None:
         if target.is_file():
@@ -164,14 +178,15 @@ def create_secure_encrypted_zip(target: Path, zip_filename: Path | None = None) 
                     f"ディレクトリ '{target}' を '{zip_filename}' にパスワード付きで暗号化・圧縮しました。"
                 )
             else:
-                print(
-                    f"エラー: 指定されたパス '{target}' はファイルまたはディレクトリではありません。"
+                raise ValueError(
+                    f"指定されたパス '{target}' はファイルまたはディレクトリではありません。"
                 )
-                sys.exit(1)
         return zip_filename
-    except Exception as e:
-        print(f"エラー: ZIPファイルの作成中にエラーが発生しました: {e}")
-        sys.exit(1)
+    except Exception:
+        # エラー発生時は作成途中のZIPファイルを削除
+        if zip_filename and zip_filename.exists():
+            zip_filename.unlink()
+        raise
 
 
 def extract_secure_encrypted_zip(
@@ -181,6 +196,16 @@ def extract_secure_encrypted_zip(
     """
     cryptographyライブラリで暗号化されたZIPファイルを指定したディレクトリに解凍し、復号化します。
     解凍先ディレクトリが省略された場合は、ZIPファイルと同じ場所に作成します。
+
+    Args:
+        zip_filepath: 解凍するZIPファイルのパス
+        extract_dir: 解凍先ディレクトリのパス（省略可能）
+
+    Raises:
+        FileNotFoundError: ZIPファイルが見つからない場合
+        zipfile.BadZipFile: 無効なZIPファイルの場合
+        ValueError: パスワードが間違っている場合
+        OSError: ファイルの読み書きに失敗した場合
     """
     password = getpass.getpass(
         f"'{zip_filepath}' の解凍パスワードを入力してください: "
@@ -190,48 +215,83 @@ def extract_secure_encrypted_zip(
         extract_dir = zip_filepath.parent / zip_filepath.stem.replace("_encrypted", "")
     extract_dir.mkdir(parents=True, exist_ok=True)
 
+    def clear_directory(dir_path: Path) -> None:
+        """ディレクトリ内のすべてのファイルとフォルダを削除"""
+        if not dir_path.exists():
+            return
+        for item in dir_path.iterdir():
+            if item.is_file():
+                item.unlink()
+            else:
+                import shutil
+
+                shutil.rmtree(item)
+
     try:
         with zipfile.ZipFile(zip_filepath, "r") as zf:
-            for item in zf.namelist():
-                if item.endswith(".encrypted"):
-                    encrypted_filename = item
-                    original_filename = encrypted_filename[:-10]
-                    salt_filename = original_filename + ".salt"
-                    if salt_filename in zf.namelist():
-                        with zf.open(salt_filename) as salt_file:
-                            salt = salt_file.read()
-                        encrypted_file_path = extract_dir / encrypted_filename
-                        output_file_path = extract_dir / original_filename
-                        encrypted_file_path.parent.mkdir(parents=True, exist_ok=True)
-                        with (
-                            zf.open(encrypted_filename) as encrypted_file,
-                            open(encrypted_file_path, "wb") as outfile,
-                        ):
-                            outfile.write(encrypted_file.read())
-                        try:
-                            decrypt_file(
-                                encrypted_file_path, output_file_path, password, salt
+            try:
+                for item in zf.namelist():
+                    if item.endswith(".encrypted"):
+                        encrypted_filename = item
+                        original_filename = encrypted_filename[:-10]
+                        salt_filename = original_filename + ".salt"
+                        if salt_filename in zf.namelist():
+                            with zf.open(salt_filename) as salt_file:
+                                salt = salt_file.read()
+                            encrypted_file_path = extract_dir / encrypted_filename
+                            output_file_path = extract_dir / original_filename
+                            encrypted_file_path.parent.mkdir(
+                                parents=True, exist_ok=True
                             )
-                            os.remove(encrypted_file_path)
-                            print(f"'{original_filename}' を復号化しました。")
-                        except Exception as e:
+                            with (
+                                zf.open(encrypted_filename) as encrypted_file,
+                                open(encrypted_file_path, "wb") as outfile,
+                            ):
+                                outfile.write(encrypted_file.read())
+                            try:
+                                decrypt_file(
+                                    encrypted_file_path,
+                                    output_file_path,
+                                    password,
+                                    salt,
+                                )
+                                os.remove(encrypted_file_path)
+                                print(f"'{original_filename}' を復号化しました。")
+                            except Exception as e:
+                                os.remove(encrypted_file_path)
+                                if "decrypt" in str(e) or "Invalid token" in str(e):
+                                    clear_directory(extract_dir)
+                                    raise ValueError(
+                                        "エラー: パスワードが間違っています。"
+                                    )
+                                print(
+                                    f"エラー: '{original_filename}' の復号化に失敗しました: {e}"
+                                )
+                                continue
+                        else:
                             print(
-                                f"エラー: '{original_filename}' の復号化に失敗しました: {e}"
+                                f"警告: 対応するソルトファイルが見つかりません: {salt_filename}"
                             )
-                    else:
-                        print(
-                            f"警告: 対応するソルトファイルが見つかりません: {salt_filename}"
-                        )
-                elif not item.endswith(".salt"):
-                    # 暗号化されていないファイルはそのまま展開
-                    zf.extract(item, extract_dir)
-                    print(f"'{item}' を展開しました (暗号化されていません)。")
+                    elif not item.endswith(".salt"):
+                        # 暗号化されていないファイルはそのまま展開
+                        zf.extract(item, extract_dir)
+                        print(f"'{item}' を展開しました (暗号化されていません)。")
+            except Exception as e:
+                print(f"エラー: ファイルの展開中にエラーが発生しました: {e}")
+                clear_directory(extract_dir)
+                raise
     except zipfile.BadZipFile:
         print(f"エラー: '{zip_filepath}' は有効なZIPファイルではありません。")
+        clear_directory(extract_dir)
+        raise
     except FileNotFoundError:
         print(f"エラー: ファイル '{zip_filepath}' が見つかりません。")
+        clear_directory(extract_dir)
+        raise
     except Exception as e:
         print(f"エラー: ZIPファイルの読み込み中にエラーが発生しました: {e}")
+        clear_directory(extract_dir)
+        raise
 
 
 if __name__ == "__main__":
@@ -252,7 +312,11 @@ if __name__ == "__main__":
         output_zip_path = None
         if len(sys.argv) > 3:
             output_zip_path = Path(sys.argv[3]).resolve()
-        create_secure_encrypted_zip(target_path, output_zip_path)
+        try:
+            create_secure_encrypted_zip(target_path, output_zip_path)
+        except Exception as e:
+            print(f"エラー: {e}")
+            sys.exit(1)
 
     elif operation == "-x":
         if len(sys.argv) != 3:
@@ -260,7 +324,11 @@ if __name__ == "__main__":
             sys.exit(1)
         zip_filepath_str = sys.argv[2]
         zip_filepath = Path(zip_filepath_str).resolve()
-        extract_secure_encrypted_zip(zip_filepath)
+        try:
+            extract_secure_encrypted_zip(zip_filepath)
+        except Exception as e:
+            print(f"エラー: {e}")
+            sys.exit(1)
 
     else:
         print(

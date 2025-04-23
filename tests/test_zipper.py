@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from zipfile import ZipFile
 
-from pytest import MonkeyPatch
+from pytest import MonkeyPatch, raises
 
 from scribe.zipper import (
     create_secure_encrypted_zip,
@@ -77,25 +77,38 @@ def test_create_extract_secure_encrypted_zip_directory(
     assert extracted_file.read_text() == "test data"
 
 
-# def test_extract_secure_encrypted_zip_wrong_password(
-#     tmp_path: Path,
-#     monkeypatch: MonkeyPatch,
-# ) -> None:
-#     # 事前に作成されたパスワード付きZIPファイルを用意
-#     monkeypatch.setattr("getpass.getpass", lambda x: "correct_password")
-#     target_file = tmp_path / "secret.txt"
-#     target_file.write_text("top secret")
-#     create_secure_encrypted_zip(target_file, tmp_path / "secret_encrypted.zip")
+def test_extract_secure_encrypted_zip_wrong_password(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """誤ったパスワードでの解凍テスト"""
+    # 事前に作成されたパスワード付きZIPファイルを用意
+    monkeypatch.setattr("getpass.getpass", lambda x: "correct_password")
+    target_file = tmp_path / "secret.txt"
+    target_file.write_text("top secret")
+    zip_path = create_secure_encrypted_zip(
+        target_file, tmp_path / "secret_encrypted.zip"
+    )
 
-#     # 間違ったパスワードで解凍を試みる
-#     monkeypatch.setattr("getpass.getpass", lambda x: "wrong_password")
-#     extract_dir = tmp_path / "extracted_wrong"
-#     with raises(
-#         Exception,
-#         match="復号化に失敗しました: パスワードが間違っている可能性があります。",
-#     ):
-#         extract_secure_encrypted_zip(target_file, extract_dir)
-#     assert not (extract_dir / "secret.txt").exists()
+    try:
+        # 間違ったパスワードで解凍を試みる
+        monkeypatch.setattr("getpass.getpass", lambda x: "wrong_password")
+        extract_dir = tmp_path / "extracted_wrong"
+        extract_dir.mkdir(exist_ok=True)
+
+        extract_secure_encrypted_zip(zip_path, extract_dir)
+
+        # 解凍が失敗しているため、ファイルが存在しないことを確認
+        assert not (extract_dir / "secret.txt").exists()
+
+    finally:
+        # テスト終了後にファイルを削除
+        if zip_path.exists():
+            zip_path.unlink()
+        if extract_dir.exists():
+            import shutil
+
+            shutil.rmtree(extract_dir)
 
 
 def test_create_secure_encrypted_zip_automatic_filename(
@@ -111,16 +124,23 @@ def test_create_secure_encrypted_zip_automatic_filename(
     zip_filename.unlink()
 
 
-# def test_create_secure_encrypted_zip_invalid_target(
-#     tmp_path: Path,
-#     monkeypatch: MonkeyPatch,
-# ) -> None:
-#     """無効なターゲットを指定した場合のテスト"""
-#     monkeypatch.setattr("getpass.getpass", lambda x: "test_password")
-#     invalid_target = tmp_path / "non_existent_file"
-#     with raises(SystemExit):
-#         create_secure_encrypted_zip(invalid_target)
-#     Path(tmp_path / "non_existent_file_encrypted.zip").unlink()
+def test_create_secure_encrypted_zip_invalid_target(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """無効なターゲットを指定した場合のテスト"""
+    monkeypatch.setattr("getpass.getpass", lambda _: "test_password")
+    invalid_target = tmp_path / "non_existent_file"
+
+    try:
+        # 存在しないファイルを圧縮しようとする
+        with raises(FileNotFoundError):
+            create_secure_encrypted_zip(invalid_target)
+    finally:
+        # 生成される可能性のあるファイルを確実に削除
+        encrypted_zip = tmp_path / "non_existent_file_encrypted.zip"
+        if encrypted_zip.exists():
+            encrypted_zip.unlink()
 
 
 def test_secure_encrypted_zip_content(
