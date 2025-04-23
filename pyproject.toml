@@ -44,7 +44,7 @@ ensure_newline_before_comments = true
 [tool.flake8]
 max-line-length = 88
 # Ignore Errors which can conflict with black
-extend-ignore = ["E203", "E501"]
+extend-ignore = ["E203", "E501", "W503"]
 # Check explicitly for Errors (E), Warnings (W), and flake8 Errors (F)
 select = ["E", "W", "F"]
 
