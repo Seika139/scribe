@@ -12,8 +12,8 @@
   <a href="https://github.com/Seika139/scribe/actions/workflows/ci.yml">
     <img alt="CI" src="https://github.com/Seika139/scribe/actions/workflows/ci.yml/badge.svg">
   </a>
-  <a href="https://github.com/Seika139/scribe/releases/tag/v0.2.0">
-    <img alt="version" src="https://img.shields.io/badge/version-0.2.0-white.svg">
+  <a href="https://github.com/Seika139/scribe/releases/tag/v0.2.1">
+    <img alt="version" src="https://img.shields.io/badge/version-v0.2.1-white.svg">
   </a>
 </div>
 
@@ -29,7 +29,7 @@ poetry add git+https://github.com/Seika139/scribe.git
 
 ```bash
 # 特定のバージョンを指定する場合
-poetry add git+https://github.com/Seika139/scribe.git@v0.2.0
+poetry add git+https://github.com/Seika139/scribe.git@v0.2.1
 # 特定のコミットを指定する場合
 poetry add git+https://github.com/Seika139/scribe.git@<commit_hash>
 ```
