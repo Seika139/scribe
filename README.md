@@ -12,6 +12,9 @@
   <a href="https://github.com/Seika139/scribe/actions/workflows/ci.yml">
     <img alt="CI" src="https://github.com/Seika139/scribe/actions/workflows/ci.yml/badge.svg">
   </a>
+  <a href="https://github.com/Seika139/scribe/releases/tag/v0.2.0">
+    <img alt="version" src="https://img.shields.io/badge/version-0.2.0-white.svg">
+  </a>
 </div>
 
 ## Installation
@@ -20,6 +23,15 @@ poetry を利用してこのパッケージを利用する場合は以下のコ�
 
 ```bash
 poetry add git+https://github.com/Seika139/scribe.git
+```
+
+特定のバージョンやコミットを指定してインストールすることも可能です。
+
+```bash
+# 特定のバージョンを指定する場合
+poetry add git+https://github.com/Seika139/scribe.git@v0.2.0
+# 特定のコミットを指定する場合
+poetry add git+https://github.com/Seika139/scribe.git@<commit_hash>
 ```
 
 ## Usage
@@ -52,6 +64,12 @@ print(file_scribe.filepath) # ファイルのパスを返します (Path)
 print(file_scribe.encoding) # ファイルのエンコーディングを返します (str)
 print(file_scribe.content) # ファイルの内容を返します (str)
 ```
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md).
+
+GitHub のタグを利用して、リリースの履歴を管理しています。
 
 ## For Developers
 
