@@ -183,6 +183,9 @@ def create_secure_encrypted_zip(
     if password_bytes != password_confirm_bytes:
         raise ValueError("エラー: パスワードが一致しません。")
 
+    # パスの正規化
+    target = target.resolve()
+
     # メタデータ用のソルトを生成
     metadata_salt = os.urandom(16)
     metadata_key, _ = generate_key_from_password(password_bytes, metadata_salt)
@@ -202,15 +205,16 @@ def create_secure_encrypted_zip(
         zip_filename = zip_filename_dir / f"{zip_filename_base}{zip_filename_suffix}"
         counter = 1
         while zip_filename.exists():
-            zip_filename = (
-                zip_filename_dir / f"{zip_filename_base}_{counter}{zip_filename_suffix}"
-            )
+            zip_filename = zip_filename_dir / f"{zip_filename_base}_{counter}{zip_filename_suffix}"
             counter += 1
+    else:
+        # zip_filenameが絶対パスでない場合は、target.parentからの相対パスとして解決
+        if not zip_filename.is_absolute():
+            zip_filename = target.parent / zip_filename
+        zip_filename = zip_filename.resolve()
 
     try:
-        file_mapping: dict[str, str] = (
-            {}
-        )  # キー: 元のファイル名, 値: 暗号化されたファイル名
+        file_mapping: dict[str, str] = {}  # キー: 元のファイル名, 値: 暗号化されたファイル名
 
         with zipfile.ZipFile(
             zip_filename, "w", zipfile.ZIP_DEFLATED, compresslevel=9
