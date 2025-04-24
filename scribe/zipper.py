@@ -205,7 +205,9 @@ def create_secure_encrypted_zip(
         zip_filename = zip_filename_dir / f"{zip_filename_base}{zip_filename_suffix}"
         counter = 1
         while zip_filename.exists():
-            zip_filename = zip_filename_dir / f"{zip_filename_base}_{counter}{zip_filename_suffix}"
+            zip_filename = (
+                zip_filename_dir / f"{zip_filename_base}_{counter}{zip_filename_suffix}"
+            )
             counter += 1
     else:
         # zip_filenameが絶対パスでない場合は、target.parentからの相対パスとして解決
@@ -214,7 +216,9 @@ def create_secure_encrypted_zip(
         zip_filename = zip_filename.resolve()
 
     try:
-        file_mapping: dict[str, str] = {}  # キー: 元のファイル名, 値: 暗号化されたファイル名
+        file_mapping: dict[str, str] = (
+            {}
+        )  # キー: 元のファイル名, 値: 暗号化されたファイル名
 
         with zipfile.ZipFile(
             zip_filename, "w", zipfile.ZIP_DEFLATED, compresslevel=9
