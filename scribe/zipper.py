@@ -194,13 +194,17 @@ def create_secure_encrypted_zip(
     if zip_filename is None:
         if target.is_file():
             zip_filename_base = target.stem + "_encrypted"
+            zip_filename_dir = target.parent
         else:
             zip_filename_base = target.name + "_encrypted"
+            zip_filename_dir = target.parent
         zip_filename_suffix = ".zip"
-        zip_filename = Path(f"{zip_filename_base}{zip_filename_suffix}")
+        zip_filename = zip_filename_dir / f"{zip_filename_base}{zip_filename_suffix}"
         counter = 1
         while zip_filename.exists():
-            zip_filename = Path(f"{zip_filename_base}_{counter}{zip_filename_suffix}")
+            zip_filename = (
+                zip_filename_dir / f"{zip_filename_base}_{counter}{zip_filename_suffix}"
+            )
             counter += 1
 
     try:
