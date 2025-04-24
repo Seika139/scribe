@@ -1,13 +1,18 @@
+import base64
 import os
+import re
 from pathlib import Path
 from zipfile import ZipFile
 
+from cryptography.fernet import Fernet
 from pytest import MonkeyPatch, raises
 
 from scribe.zipper import (
     create_secure_encrypted_zip,
     decrypt_file,
+    decrypt_filename,
     encrypt_file,
+    encrypt_filename,
     extract_secure_encrypted_zip,
     generate_key_from_password,
 )
@@ -96,7 +101,9 @@ def test_extract_secure_encrypted_zip_wrong_password(
         extract_dir = tmp_path / "extracted_wrong"
         extract_dir.mkdir(exist_ok=True)
 
-        extract_secure_encrypted_zip(zip_path, extract_dir)
+        # ValueError（パスワードが間違っています）が発生することを期待
+        with raises(ValueError, match="エラー: パスワードが間違っています。"):
+            extract_secure_encrypted_zip(zip_path, extract_dir)
 
         # 解凍が失敗しているため、ファイルが存在しないことを確認
         assert not (extract_dir / "secret.txt").exists()
@@ -283,3 +290,210 @@ def test_create_encrypted_zip_without_gitignore(
             import shutil
 
             shutil.rmtree(extract_dir)
+
+
+def test_filename_encryption_decryption(tmp_path: Path) -> None:
+    """ファイル名の暗号化と復号化のテスト"""
+    # キーの生成
+    password = b"test_password"
+    key, _ = generate_key_from_password(password)
+    fernet = Fernet(key)
+
+    # 通常のファイル名
+    original_name = "test_file.txt"
+    encrypted_name = encrypt_filename(original_name, fernet)
+    decrypted_name = decrypt_filename(encrypted_name, fernet)
+    assert decrypted_name == original_name
+
+    # パスを含むファイル名
+    original_name_with_path = "dir1/subdir/test_file.txt"
+    encrypted_name_with_path = encrypt_filename(original_name_with_path, fernet)
+    decrypted_name_with_path = decrypt_filename(encrypted_name_with_path, fernet)
+    assert decrypted_name_with_path == original_name_with_path
+
+    # 日本語ファイル名
+    original_name_jp = "テスト_ファイル.txt"
+    encrypted_name_jp = encrypt_filename(original_name_jp, fernet)
+    decrypted_name_jp = decrypt_filename(encrypted_name_jp, fernet)
+    assert decrypted_name_jp == original_name_jp
+
+
+def test_create_extract_secure_encrypted_zip_with_filename_encryption(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """ファイル名の暗号化を含むZIP作成と展開のテスト"""
+    # パスワード入力のモック
+    monkeypatch.setattr("getpass.getpass", lambda x: "test_password")
+
+    # テストディレクトリとファイルの作成
+    test_dir = tmp_path / "test_dir"
+    test_dir.mkdir()
+
+    # 通常のファイル
+    normal_file = test_dir / "test_file.txt"
+    normal_file.write_text("test data")
+
+    # サブディレクトリ内のファイル
+    sub_dir = test_dir / "subdir"
+    sub_dir.mkdir()
+    sub_file = sub_dir / "sub_file.txt"
+    sub_file.write_text("sub dir data")
+
+    # 日本語名のファイル
+    jp_file = test_dir / "テスト.txt"
+    jp_file.write_text("日本語テスト")
+
+    # ZIPファイルの作成
+    zip_filename = tmp_path / "encrypted.zip"
+    zip_filename = create_secure_encrypted_zip(test_dir, zip_filename)
+    assert os.path.exists(zip_filename)
+
+    # ZIPファイルの内容確認（暗号化されたファイル名のみ確認）
+    with ZipFile(zip_filename, "r") as zf:
+        namelist = zf.namelist()
+        # metadata.encryptedの存在を確認
+        assert "metadata.encrypted" in namelist
+        # すべてのファイルが.encryptedまたは.saltで終わることを確認
+        for name in namelist:
+            if name != "metadata.encrypted":
+                assert name.endswith(".encrypted") or name.endswith(".salt")
+
+    # 展開テスト
+    extract_dir = tmp_path / "extracted"
+    extract_secure_encrypted_zip(zip_filename, extract_dir)
+
+    # オリジナルのファイル名で復元されていることを確認
+    assert (extract_dir / "test_file.txt").exists()
+    assert (extract_dir / "subdir" / "sub_file.txt").exists()
+    assert (extract_dir / "テスト.txt").exists()
+
+    # ファイルの内容を確認
+    assert (extract_dir / "test_file.txt").read_text() == "test data"
+    assert (extract_dir / "subdir" / "sub_file.txt").read_text() == "sub dir data"
+    assert (extract_dir / "テスト.txt").read_text() == "日本語テスト"
+
+
+def test_create_extract_secure_encrypted_zip_with_encrypted_filenames(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """ファイル名を暗号化してZIP作成と展開するテスト"""
+    # パスワード入力のモック
+    monkeypatch.setattr("getpass.getpass", lambda x: "test_password")
+
+    # テストディレクトリとファイルの作成
+    test_dir = tmp_path / "test_dir_encrypted_names"
+    test_dir.mkdir()
+
+    # 通常のファイル
+    normal_file = test_dir / "secret_file.txt"
+    normal_file.write_text("confidential data")
+
+    # サブディレクトリ内のファイル
+    sub_dir = test_dir / "private"
+    sub_dir.mkdir()
+    sub_file = sub_dir / "classified.txt"
+    sub_file.write_text("top secret data")
+
+    # 日本語名のファイル
+    jp_file = test_dir / "機密情報.txt"
+    jp_file.write_text("秘密のデータ")
+
+    # ZIPファイルの作成（ファイル名暗号化オプションを有効化）
+    zip_filename = tmp_path / "encrypted_with_names.zip"
+    zip_filename = create_secure_encrypted_zip(
+        test_dir, zip_filename, encrypt_filenames=True
+    )
+    assert os.path.exists(zip_filename)
+
+    # ZIPファイルの内容を確認（暗号化されたファイル名のパターンを検証）
+    with ZipFile(zip_filename, "r") as zf:
+        namelist = zf.namelist()
+        # metadata.encryptedとmetadata.saltの存在を確認
+        assert "metadata.encrypted" in namelist
+        assert any(name.endswith("metadata.salt") for name in namelist)
+
+        # 暗号化されたファイル名のパターンをチェック
+        for name in namelist:
+            if name not in ["metadata.encrypted"] and not name.endswith(
+                "metadata.salt"
+            ):
+                # ファイル名がbase64エンコードされたパターンに一致することを確認
+                assert name.endswith(".encrypted") or name.endswith(".salt")
+                # 元のファイル名が推測できないことを確認
+                name_without_ext = name.replace(".encrypted", "").replace(".salt", "")
+                # base64でデコード可能な文字列であることを確認
+                try:
+                    decoded = base64.urlsafe_b64decode(name_without_ext.encode("ascii"))
+                    # デコードされた内容に元のファイル名が含まれていないことを確認
+                    assert b"secret_file.txt" not in decoded
+                    assert b"classified.txt" not in decoded
+                    assert "機密情報.txt".encode("utf-8") not in decoded
+                except Exception:
+                    assert False, f"Invalid base64 filename: {name_without_ext}"
+
+                # 暗号化されたファイル名に元のファイル名が含まれていないことを確認
+                assert "secret_file.txt" not in name
+                assert "classified.txt" not in name
+                assert "機密情報.txt" not in name
+
+    # 展開テスト
+    extract_dir = tmp_path / "extracted_with_encrypted_names"
+    extract_secure_encrypted_zip(zip_filename, extract_dir)
+
+    # オリジナルのファイル名で正しく復元されていることを確認
+    assert (extract_dir / "secret_file.txt").exists()
+    assert (extract_dir / "private" / "classified.txt").exists()
+    assert (extract_dir / "機密情報.txt").exists()
+
+    # ファイルの内容を確認
+    assert (extract_dir / "secret_file.txt").read_text() == "confidential data"
+    assert (extract_dir / "private" / "classified.txt").read_text() == "top secret data"
+    assert (extract_dir / "機密情報.txt").read_text() == "秘密のデータ"
+
+
+def test_filename_encryption_security(tmp_path: Path) -> None:
+    """ファイル名の暗号化セキュリティテスト"""
+    # キーの生成
+    password = b"test_password"
+    key, _ = generate_key_from_password(password)
+    fernet = Fernet(key)
+
+    # テストするファイル名
+    sensitive_names = [
+        "password.txt",
+        "credit_card_info.csv",
+        "secret_key.pem",
+        "機密情報.doc",
+        "パスワード.txt",
+        "private/sensitive_data.json",
+    ]
+
+    for original_name in sensitive_names:
+        encrypted_name = encrypt_filename(original_name, fernet)
+
+        # 暗号化された名前が元の名前を含まないことを確認
+        assert original_name not in encrypted_name
+        # スラッシュが暗号化されていることを確認
+        if "/" in original_name:
+            assert "/" not in encrypted_name
+        # 拡張子が暗号化されていることを確認
+        if "." in original_name:
+            file_ext = original_name.split(".")[-1]
+            assert file_ext not in encrypted_name
+
+        # 暗号化された名前がbase64エンコードされた形式であることを確認
+        try:
+            decoded = base64.urlsafe_b64decode(encrypted_name.encode("ascii"))
+            # デコードされた内容に元の名前の一部が含まれていないことを確認
+            name_parts = re.split(r"[./]", original_name)
+            for part in name_parts:
+                if len(part) > 3:  # 短すぎる部分文字列は除外
+                    assert part.encode("utf-8") not in decoded
+        except Exception:
+            assert False, f"Invalid base64 filename: {encrypted_name}"
+
+        # 復号化で元の名前に戻ることを確認
+        decrypted_name = decrypt_filename(encrypted_name, fernet)
+        assert decrypted_name == original_name
