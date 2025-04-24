@@ -5,7 +5,6 @@ import os
 import sys
 import zipfile
 from pathlib import Path
-from typing import Dict
 
 import pathspec
 from cryptography.fernet import Fernet
@@ -205,7 +204,7 @@ def create_secure_encrypted_zip(
             counter += 1
 
     try:
-        file_mapping: Dict[str, str] = (
+        file_mapping: dict[str, str] = (
             {}
         )  # キー: 元のファイル名, 値: 暗号化されたファイル名
 
