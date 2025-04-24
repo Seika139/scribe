@@ -7,6 +7,24 @@
 フォーマットは [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) に基づいており、
 このプロジェクトは [セマンティック バージョニング](https://semver.org/lang/ja/spec/v2.0.0.html) を遵守しています。
 
+## [0.3.0] - 2025-04-25
+
+### 追加
+
+- ファイル名とディレクトリ名の暗号化機能を追加
+  - `-e` または `--encrypt-filenames` オプションで有効化可能
+  - 日本語を含むファイル名も安全に暗号化
+  - メタデータの暗号化による復号化時の自動復元
+
+### 改善
+
+- エラーメッセージと警告メッセージの表示を改善
+- ファイル名の暗号化と復号化のセキュリティを強化
+
+### ドキュメント
+
+- ファイル名暗号化オプションの使用方法を追加
+
 ## [0.2.1] - 2025-04-24
 
 ### 追加
@@ -79,6 +97,7 @@
 - README.md のインストール手順とリポジトリ URL を修正
 - CI ワークフローのアクションバージョンを v4 に更新
 
+[0.3.0]: https://github.com/Seika139/scribe/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/Seika139/scribe/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/Seika139/scribe/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/Seika139/scribe/compare/v0.1.0...v0.1.1

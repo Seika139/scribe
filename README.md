@@ -12,8 +12,8 @@
   <a href="https://github.com/Seika139/scribe/actions/workflows/ci.yml">
     <img alt="CI" src="https://github.com/Seika139/scribe/actions/workflows/ci.yml/badge.svg">
   </a>
-  <a href="https://github.com/Seika139/scribe/releases/tag/v0.2.1">
-    <img alt="version" src="https://img.shields.io/badge/version-v0.2.1-white.svg">
+  <a href="https://github.com/Seika139/scribe/releases/tag/v0.3.0">
+    <img alt="version" src="https://img.shields.io/badge/version-v0.3.0-white.svg">
   </a>
 </div>
 
