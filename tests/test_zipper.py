@@ -497,3 +497,91 @@ def test_filename_encryption_security(tmp_path: Path) -> None:
         # 復号化で元の名前に戻ることを確認
         decrypted_name = decrypt_filename(encrypted_name, fernet)
         assert decrypted_name == original_name
+
+
+def test_extract_non_encrypted_zip(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """通常のZIPファイルを解凍しようとした場合のテスト"""
+    # 通常のZIPファイルを作成
+    test_file = tmp_path / "normal.txt"
+    test_file.write_text("normal content")
+    normal_zip = tmp_path / "normal.zip"
+
+    with ZipFile(normal_zip, "w") as zf:
+        zf.write(test_file, test_file.name)
+
+    extract_dir = tmp_path / "extracted_normal"
+    extract_dir.mkdir()
+
+    # 暗号化ZIPでないファイルの解凍を試みる
+    with raises(ValueError, match="は暗号化ZIPファイルではありません"):
+        extract_secure_encrypted_zip(normal_zip, extract_dir)
+
+    # ディレクトリが空のままであることを確認
+    assert not any(extract_dir.iterdir())
+
+
+def test_extract_with_existing_files(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """既存のファイルがある解凍先に対する動作テスト"""
+    # パスワード入力のモック
+    monkeypatch.setattr("getpass.getpass", lambda x: "test_password")
+
+    # 暗号化ZIPファイルの作成
+    source_file = tmp_path / "secret.txt"
+    source_file.write_text("secret content")
+    zip_path = create_secure_encrypted_zip(
+        source_file, tmp_path / "secret_encrypted.zip"
+    )
+
+    # 解凍先に既存のファイルを作成
+    extract_dir = tmp_path / "extract_with_existing"
+    extract_dir.mkdir()
+    existing_file = extract_dir / "existing.txt"
+    existing_file.write_text("existing content")
+
+    # 解凍を実行
+    extract_secure_encrypted_zip(zip_path, extract_dir)
+
+    # 既存のファイルが維持されていることを確認
+    assert existing_file.exists()
+    assert existing_file.read_text() == "existing content"
+
+    # 新しいファイルも正しく解凍されていることを確認
+    decrypted_file = extract_dir / "secret.txt"
+    assert decrypted_file.exists()
+    assert decrypted_file.read_text() == "secret content"
+
+
+def test_zip_with_relative_path(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """相対パスでのZIPファイル名指定のテスト"""
+    # パスワード入力のモック
+    monkeypatch.setattr("getpass.getpass", lambda x: "test_password")
+
+    # サブディレクトリを作成
+    sub_dir = tmp_path / "subdir"
+    sub_dir.mkdir()
+    source_file = sub_dir / "data.txt"
+    source_file.write_text("test data")
+
+    # 相対パスでZIPファイル名を指定
+    relative_zip = Path("output.zip")  # 相対パス
+    zip_path = create_secure_encrypted_zip(source_file, relative_zip)
+
+    # ZIPファイルがsource_fileと同じディレクトリに作成されていることを確認
+    assert zip_path.parent == source_file.parent
+    assert zip_path.exists()
+
+    # 解凍して内容を確認
+    extract_dir = tmp_path / "extracted_relative"
+    extract_secure_encrypted_zip(zip_path, extract_dir)
+    decrypted_file = extract_dir / "data.txt"
+    assert decrypted_file.exists()
+    assert decrypted_file.read_text() == "test data"
