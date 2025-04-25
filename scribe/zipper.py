@@ -324,37 +324,55 @@ def extract_secure_encrypted_zip(
     Raises:
         FileNotFoundError: ZIPファイルが見つからない場合
         zipfile.BadZipFile: 無効なZIPファイルの場合
-        ValueError: パスワードが間違っている場合
+        ValueError: パスワードが間違っている場合、またはファイルが暗号化ZIPではない場合
         OSError: ファイルの読み書きに失敗した場合
     """
+    # 先にZIPファイルを検証
+    if not zip_filepath.exists():
+        raise FileNotFoundError(
+            f"指定されたファイル '{zip_filepath}' が見つかりません。"
+        )
+
+    try:
+        with zipfile.ZipFile(zip_filepath, "r") as zf:
+            # 暗号化ZIPファイルの必須要素を確認
+            if "metadata.encrypted" not in zf.namelist():
+                raise ValueError(
+                    f"エラー: '{zip_filepath}' は暗号化ZIPファイルではありません。"
+                    "このプログラムで作成された暗号化ZIPファイルのみを解凍できます。"
+                )
+    except zipfile.BadZipFile:
+        raise zipfile.BadZipFile(
+            f"エラー: '{zip_filepath}' は有効なZIPファイルではありません。"
+        )
+
     password = getpass.getpass(
         f"'{zip_filepath}' の解凍パスワードを入力してください: "
     ).encode("utf-8")
 
     if extract_dir is None:
         extract_dir = zip_filepath.parent / zip_filepath.stem.replace("_encrypted", "")
-    extract_dir.mkdir(parents=True, exist_ok=True)
 
-    def clear_directory(dir_path: Path) -> None:
-        """ディレクトリ内のすべてのファイルとフォルダを削除"""
-        if not dir_path.exists():
-            return
-        for item in dir_path.iterdir():
-            if item.is_file():
-                item.unlink()
-            else:
-                import shutil
+    # 抽出されたファイルを追跡
+    extracted_files: set[Path] = set()
 
-                shutil.rmtree(item)
+    def cleanup_extracted_files() -> None:
+        """解凍処理中に作成されたファイルのみを削除"""
+        for file_path in extracted_files:
+            if file_path.exists():
+                if file_path.is_file():
+                    file_path.unlink()
+                else:
+                    import shutil
+
+                    shutil.rmtree(file_path)
 
     try:
-        with zipfile.ZipFile(zip_filepath, "r") as zf:
-            # メタデータを最初に読み込む
-            if "metadata.encrypted" not in zf.namelist():
-                raise ValueError(
-                    "エラー: メタデータが見つかりません。ファイルが破損している可能性があります。"
-                )
+        # ディレクトリが存在しない場合のみ作成
+        extract_dir.mkdir(parents=True, exist_ok=True)
+        extracted_files.add(extract_dir)
 
+        with zipfile.ZipFile(zip_filepath, "r") as zf:
             with zf.open("metadata.encrypted") as metadata_file:
                 encrypted_metadata = metadata_file.read()
 
@@ -374,7 +392,7 @@ def extract_secure_encrypted_zip(
                     metadata = json.loads(decrypted_metadata.decode("utf-8"))
                     common_salt = base64.b64decode(metadata["common_salt"])
                 except Exception as e:
-                    clear_directory(extract_dir)
+                    cleanup_extracted_files()
                     raise ValueError("エラー: パスワードが間違っています。") from e
 
                 # 共通のソルトでファイルを復号化
@@ -394,30 +412,36 @@ def extract_secure_encrypted_zip(
                             salt = salt_file.read()
 
                         # 暗号化されたファイルを一時的に保存
-                        encrypted_file_path = extract_dir / "temp_encrypted"
+                        temp_encrypted = extract_dir / "temp_encrypted"
                         output_file_path = extract_dir / original_path
+
+                        # 出力先のディレクトリを作成し、追跡リストに追加
                         output_file_path.parent.mkdir(parents=True, exist_ok=True)
+                        extracted_files.add(output_file_path.parent)
 
                         with (
                             zf.open(encrypted_filename) as encrypted_file,
-                            open(encrypted_file_path, "wb") as outfile,
+                            open(temp_encrypted, "wb") as outfile,
                         ):
                             outfile.write(encrypted_file.read())
+                        extracted_files.add(temp_encrypted)
 
                         try:
                             decrypt_file(
-                                encrypted_file_path,
+                                temp_encrypted,
                                 output_file_path,
                                 password,
                                 salt,
                             )
-                            os.remove(encrypted_file_path)
+                            extracted_files.add(output_file_path)
+                            if os.path.exists(temp_encrypted):
+                                os.remove(temp_encrypted)
                             print(f"'{original_path}' を復号化しました。")
                         except Exception as e:
-                            if os.path.exists(encrypted_file_path):
-                                os.remove(encrypted_file_path)
+                            if os.path.exists(temp_encrypted):
+                                os.remove(temp_encrypted)
                             if "decrypt" in str(e) or "Invalid token" in str(e):
-                                clear_directory(extract_dir)
+                                cleanup_extracted_files()
                                 raise ValueError(
                                     "エラー: パスワードが間違っています。"
                                 ) from e
@@ -431,21 +455,21 @@ def extract_secure_encrypted_zip(
                         )
 
             except StopIteration:
-                clear_directory(extract_dir)
+                cleanup_extracted_files()
                 raise ValueError(
                     "エラー: metadata.saltが見つかりません。ファイルが破損している可能性があります。"
                 )
             except Exception as e:
-                clear_directory(extract_dir)
+                cleanup_extracted_files()
                 if isinstance(e, ValueError):
                     raise
                 raise ValueError("エラー: メタデータの復号化に失敗しました。") from e
 
     except (zipfile.BadZipFile, FileNotFoundError):
-        clear_directory(extract_dir)
+        cleanup_extracted_files()
         raise
     except Exception as e:
-        clear_directory(extract_dir)
+        cleanup_extracted_files()
         if isinstance(e, ValueError):
             raise
         raise ValueError(
