@@ -45,8 +45,8 @@ def encrypt_file(input_path: Path, output_path: Path, password: bytes) -> bytes:
     salt = os.urandom(16)
     key, _ = generate_key_from_password(password, salt)
     f = Fernet(key)
-    with open(input_path, "rb") as infile:
-        data = infile.read()
+    with open(input_path, "rb") as input_file:
+        data = input_file.read()
     encrypted_data = f.encrypt(data)
     with open(output_path, "wb") as outfile:
         outfile.write(salt + encrypted_data)
@@ -62,8 +62,8 @@ def decrypt_file(
     """暗号化されたファイルを復号化します。"""
     key, _ = generate_key_from_password(password, salt)
     f = Fernet(key)
-    with open(input_path, "rb") as infile:
-        encrypted_data_with_salt = infile.read()
+    with open(input_path, "rb") as input_file:
+        encrypted_data_with_salt = input_file.read()
         encrypted_data = encrypted_data_with_salt[16:]
     decrypted_data = f.decrypt(encrypted_data)
     with open(output_path, "wb") as outfile:
