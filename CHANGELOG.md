@@ -7,6 +7,25 @@
 フォーマットは [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) に基づいており、
 このプロジェクトは [セマンティック バージョニング](https://semver.org/lang/ja/spec/v2.0.0.html) を遵守しています。
 
+## [0.3.1] - 2025-05-01
+
+### 改善
+
+- コードの品質向上:
+  - 暗号化/復号化処理の変数名を統一し、可読性を向上
+  - gitignoreのパターンマッチングを直接利用するように改善
+
+### 修正
+
+- Windowsでmake test-localが失敗する問題を修正
+- 相対パスの解決方法を改善し、ZIPファイル名の生成を正規化
+
+### テスト
+
+- エラー処理のテストケースを追加:
+  - 非暗号化ZIPファイルの検証テスト
+  - 既存ファイルがある場合の解凍テスト
+
 ## [0.3.0] - 2025-04-25
 
 ### 追加
@@ -110,6 +129,7 @@
 - README.md のインストール手順とリポジトリ URL を修正
 - CI ワークフローのアクションバージョンを v4 に更新
 
+[0.3.1]: https://github.com/Seika139/scribe/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/Seika139/scribe/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/Seika139/scribe/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/Seika139/scribe/compare/v0.1.1...v0.2.0
