@@ -96,7 +96,8 @@ def should_ignore_file(
         return False
 
     # ファイルパスをbase_dirからの相対パスに変換
-    relative_path = str(path.relative_to(base_dir))
+    # Windowsでも常にPOSIX形式のパス（フォワードスラッシュ）を使用
+    relative_path = path.relative_to(base_dir).as_posix()
     return gitignore.match_file(relative_path)
 
 
@@ -259,7 +260,8 @@ def create_secure_encrypted_zip(
                             )
                             continue
 
-                        relative_path = str(file_path.relative_to(target))
+                        # OSに依存しない形式でパスを扱うよう修正
+                        relative_path = file_path.relative_to(target).as_posix()
                         if encrypt_filenames:
                             encrypted_name = encrypt_filename(
                                 relative_path, metadata_fernet
@@ -412,7 +414,11 @@ def extract_secure_encrypted_zip(
 
                         # 暗号化されたファイルを一時的に保存
                         temp_encrypted = extract_dir / "temp_encrypted"
-                        output_file_path = extract_dir / original_path
+
+                        # Windows環境でもパスの区切り文字を統一するためにPosixパスを使用
+                        # original_pathがスラッシュを含む場合にWindowsでも正しく処理できるようにする
+                        norm_path = Path(original_path.replace("/", os.sep))
+                        output_file_path = extract_dir / norm_path
 
                         # 出力先のディレクトリを作成し、追跡リストに追加
                         output_file_path.parent.mkdir(parents=True, exist_ok=True)

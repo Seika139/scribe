@@ -1,6 +1,7 @@
 import base64
 import os
 import re
+import shutil
 from pathlib import Path
 from zipfile import ZipFile
 
@@ -212,6 +213,8 @@ cache/
 
         # 解凍用の一時ディレクトリを作成
         extract_dir = test_dir.parent / "extracted_with_gitignore"
+        if extract_dir.exists():
+            shutil.rmtree(extract_dir)
         extract_dir.mkdir()
 
         # 解凍を実行
@@ -237,13 +240,14 @@ cache/
         assert (extract_dir / "temp.py").exists()  # !*.py による除外解除
 
     finally:
-        # テスト終了後にファイルを削除
-        if zip_output.exists():
-            zip_output.unlink()
-        if extract_dir.exists():
-            import shutil
-
-            shutil.rmtree(extract_dir)
+        # テスト終了後にファイルを削除する
+        try:
+            if zip_output.exists():
+                zip_output.unlink()
+            if extract_dir.exists():
+                shutil.rmtree(extract_dir)
+        except Exception as e:
+            print(f"クリーンアップ中にエラーが発生しました: {e}")
 
 
 def test_create_encrypted_zip_without_gitignore(
@@ -272,6 +276,8 @@ def test_create_encrypted_zip_without_gitignore(
 
         # 解凍用の一時ディレクトリを作成
         extract_dir = test_dir.parent / "extracted_without_gitignore"
+        if extract_dir.exists():
+            shutil.rmtree(extract_dir)
         extract_dir.mkdir()
 
         # 解凍を実行
@@ -283,13 +289,14 @@ def test_create_encrypted_zip_without_gitignore(
         assert (extract_dir / "cache" / "data.txt").exists()
 
     finally:
-        # テスト終了後にファイルを削除
-        if zip_output.exists():
-            zip_output.unlink()
-        if extract_dir.exists():
-            import shutil
-
-            shutil.rmtree(extract_dir)
+        # テスト終了後にファイルを削除する
+        try:
+            if zip_output.exists():
+                zip_output.unlink()
+            if extract_dir.exists():
+                shutil.rmtree(extract_dir)
+        except Exception as e:
+            print(f"クリーンアップ中にエラーが発生しました: {e}")
 
 
 def test_filename_encryption_decryption(tmp_path: Path) -> None:
@@ -356,8 +363,7 @@ def test_create_extract_secure_encrypted_zip_with_filename_encryption(
         assert "metadata.encrypted" in namelist
         # すべてのファイルが.encryptedまたは.saltで終わることを確認
         for name in namelist:
-            if name != "metadata.encrypted":
-                assert name.endswith(".encrypted") or name.endswith(".salt")
+            assert name.endswith(".encrypted") or name.endswith(".salt")
 
     # 展開テスト
     extract_dir = tmp_path / "extracted"
@@ -440,6 +446,9 @@ def test_create_extract_secure_encrypted_zip_with_encrypted_filenames(
 
     # 展開テスト
     extract_dir = tmp_path / "extracted_with_encrypted_names"
+    if extract_dir.exists():
+        shutil.rmtree(extract_dir)
+    extract_dir.mkdir()
     extract_secure_encrypted_zip(zip_filename, extract_dir)
 
     # オリジナルのファイル名で正しく復元されていることを確認
@@ -451,6 +460,14 @@ def test_create_extract_secure_encrypted_zip_with_encrypted_filenames(
     assert (extract_dir / "secret_file.txt").read_text() == "confidential data"
     assert (extract_dir / "private" / "classified.txt").read_text() == "top secret data"
     assert (extract_dir / "機密情報.txt").read_text() == "秘密のデータ"
+
+    try:
+        if zip_filename.exists():
+            zip_filename.unlink()
+        if extract_dir.exists():
+            shutil.rmtree(extract_dir)
+    except Exception as e:
+        print(f"クリーンアップ中にエラーが発生しました: {e}")
 
 
 def test_filename_encryption_security(tmp_path: Path) -> None:
