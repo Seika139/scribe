@@ -10,6 +10,7 @@ import pathspec
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from pathspec.patterns.gitwildmatch import GitWildMatchPattern
 
 
 def generate_key_from_password(
@@ -81,9 +82,7 @@ def load_gitignore(directory: Path) -> pathspec.PathSpec | None:
         return None
 
     with open(gitignore_path, encoding="utf-8") as f:
-        gitignore = pathspec.PathSpec.from_lines(
-            pathspec.patterns.GitWildMatchPattern, f.readlines()
-        )
+        gitignore = pathspec.PathSpec.from_lines(GitWildMatchPattern, f.readlines())
     return gitignore
 
 
