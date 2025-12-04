@@ -439,9 +439,9 @@ def extract_secure_encrypted_zip(
                                     "エラー: パスワードが間違っています。"
                                 ) from e
                             print(
-                                f"エラー: '{original_path}' の復号化に失敗しました: {e}"
+                                f"エラー: '{original_path}' の復号化に失敗しました。"
+                                f"原因: {type(e).__name__}: {str(e)}"
                             )
-                            print(f"    原因: {type(e).__name__}: {str(e)}")
                             continue
                     else:
                         print(
