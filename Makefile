@@ -90,7 +90,7 @@ zip:
 	@if [ -z "$(TGT)" ]; then \
 		echo "Please specify the target directories using TGT=<target>"; \
 	else \
-		poetry run python scribe/zipper.py -e -c $(TGT); \
+		uv run python scribe/zipper.py -e -c $(TGT); \
 	fi
 
 .PHONY: unzip
@@ -98,5 +98,5 @@ unzip:
 	@if [ -z "$(TGT)" ]; then \
 		echo "Please specify the target zip file using TGT=<target>"; \
 	else \
-		poetry run python scribe/zipper.py -x $(TGT); \
+		uv run python scribe/zipper.py -x $(TGT); \
 	fi
