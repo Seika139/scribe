@@ -41,17 +41,15 @@ def generate_key_from_password(
     return key, salt
 
 
-def encrypt_file(input_path: Path, output_path: Path, password: bytes) -> bytes:
-    """ファイルを暗号化し、暗号化されたファイルとソルトを返します。"""
+def encrypt_file(input_path: Path, password: bytes) -> tuple[bytes, bytes]:
+    """ファイルを暗号化し、暗号化済みデータとソルトを返します。"""
     salt = os.urandom(16)
     key, _ = generate_key_from_password(password, salt)
     f = Fernet(key)
     with open(input_path, "rb") as input_file:
         data = input_file.read()
     encrypted_data = f.encrypt(data)
-    with open(output_path, "wb") as outfile:
-        outfile.write(salt + encrypted_data)
-    return salt
+    return salt, encrypted_data
 
 
 def decrypt_file(
@@ -64,8 +62,7 @@ def decrypt_file(
     key, _ = generate_key_from_password(password, salt)
     f = Fernet(key)
     with open(input_path, "rb") as input_file:
-        encrypted_data_with_salt = input_file.read()
-        encrypted_data = encrypted_data_with_salt[16:]
+        encrypted_data = input_file.read()
     decrypted_data = f.decrypt(encrypted_data)
     with open(output_path, "wb") as outfile:
         outfile.write(decrypted_data)
@@ -110,12 +107,12 @@ def encrypt_filename(filename: str, fernet: Fernet) -> str:
         fernet: 暗号化に使用するFernetオブジェクト
 
     Returns:
-        暗号化されたファイル名（base64エンコード）
+        暗号化されたファイル名（Fernetトークン）
     """
     try:
         print(f"暗号化前のファイル名: {filename}")
         encrypted_bytes = fernet.encrypt(filename.encode("utf-8"))
-        encrypted_name = base64.urlsafe_b64encode(encrypted_bytes).decode("ascii")
+        encrypted_name = encrypted_bytes.decode("ascii")
         print(f"暗号化後のファイル名: {encrypted_name}")
         return encrypted_name
     except Exception as e:
@@ -129,7 +126,7 @@ def decrypt_filename(encrypted_filename: str, fernet: Fernet) -> str:
     暗号化されたファイル名を復号化します。
 
     Args:
-        encrypted_filename: 暗号化されたファイル名（base64エンコード）
+        encrypted_filename: 暗号化されたファイル名（Fernetトークン）
         fernet: 復号化に使用するFernetオブジェクト
 
     Returns:
@@ -137,8 +134,7 @@ def decrypt_filename(encrypted_filename: str, fernet: Fernet) -> str:
     """
     try:
         print(f"復号化前のファイル名: {encrypted_filename}")
-        encrypted_bytes = base64.urlsafe_b64decode(encrypted_filename.encode("ascii"))
-        decrypted_bytes = fernet.decrypt(encrypted_bytes)
+        decrypted_bytes = fernet.decrypt(encrypted_filename.encode("ascii"))
         decrypted_name = decrypted_bytes.decode("utf-8")
         print(f"復号化後のファイル名: {decrypted_name}")
         return decrypted_name
@@ -233,11 +229,9 @@ def create_secure_encrypted_zip(
                 # file_mappingのキーを元のファイル名に変更
                 file_mapping[original_name] = encrypted_name
 
-                encrypted_filepath = target.parent / f"{encrypted_name}.encrypted"
-                salt = encrypt_file(target, encrypted_filepath, password_bytes)
+                salt, encrypted_bytes = encrypt_file(target, password_bytes)
                 zf.writestr(f"{encrypted_name}.salt", salt)
-                zf.write(encrypted_filepath, f"{encrypted_name}.encrypted")
-                os.remove(encrypted_filepath)
+                zf.writestr(f"{encrypted_name}.encrypted", encrypted_bytes)
                 print(
                     f"ファイル '{target}' を '{zip_filename}' にパスワード付きで暗号化・圧縮しました。"
                 )
@@ -272,15 +266,9 @@ def create_secure_encrypted_zip(
                         # file_mappingのキーを元のファイル名に変更
                         file_mapping[relative_path] = encrypted_name
 
-                        encrypted_filepath = target / f"{encrypted_name}.encrypted"
-                        encrypted_filepath.parent.mkdir(parents=True, exist_ok=True)
-
-                        salt = encrypt_file(
-                            file_path, encrypted_filepath, password_bytes
-                        )
+                        salt, encrypted_bytes = encrypt_file(file_path, password_bytes)
                         zf.writestr(f"{encrypted_name}.salt", salt)
-                        zf.write(encrypted_filepath, f"{encrypted_name}.encrypted")
-                        os.remove(encrypted_filepath)
+                        zf.writestr(f"{encrypted_name}.encrypted", encrypted_bytes)
 
                 print(
                     f"ディレクトリ '{target}' を '{zip_filename}' にパスワード付きで暗号化・圧縮しました。"

@@ -33,8 +33,8 @@ def test_encrypt_decrypt_file(tmp_path: Path) -> None:
     input_file = tmp_path / "test_file.txt"
     input_file.write_text("test data")
     encrypted_file = tmp_path / "test_file.txt.encrypted"
-    salt = encrypt_file(input_file, encrypted_file, password)
-    assert os.path.exists(encrypted_file)
+    salt, encrypted_bytes = encrypt_file(input_file, password)
+    encrypted_file.write_bytes(encrypted_bytes)
     decrypted_file = tmp_path / "test_file.txt.decrypted"
     decrypt_file(encrypted_file, decrypted_file, password, salt)
     assert os.path.exists(decrypted_file)
