@@ -7,6 +7,12 @@
 フォーマットは [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) に基づいており、
 このプロジェクトは [セマンティック バージョニング](https://semver.org/lang/ja/spec/v2.0.0.html) を遵守しています。
 
+## [未リリース]
+
+### 修正
+
+- Windows でファイルパスが 255 文字を超えると処理が失敗する問題を解消
+
 ## [0.3.1] - 2025-05-01
 
 ### 改善
@@ -129,6 +135,7 @@
 - README.md のインストール手順とリポジトリ URL を修正
 - CI ワークフローのアクションバージョンを v4 に更新
 
+[unreleased]: https://github.com/Seika139/scribe/compare/v0.3.1...HEAD
 [0.3.1]: https://github.com/Seika139/scribe/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/Seika139/scribe/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/Seika139/scribe/compare/v0.2.0...v0.2.1
