@@ -68,34 +68,47 @@ def decrypt_file(
         outfile.write(decrypted_data)
 
 
-def load_gitignore(directory: Path) -> pathspec.PathSpec | None:
+def load_gitignore_patterns(directory: Path) -> list[tuple[Path, GitWildMatchPattern]]:
     """
-    指定されたディレクトリの .gitignore ファイルを読み込み、
-    pathspec.PathSpec オブジェクトを返します。
-    .gitignore が存在しない場合は None を返します。
+    指定ディレクトリの .gitignore を1行ずつ GitWildMatchPattern に変換し、
+    (ベースディレクトリ, パターン) のリストで返す。存在しなければ空リスト。
     """
     gitignore_path = directory / ".gitignore"
     if not gitignore_path.is_file():
-        return None
+        return []
 
+    patterns: list[tuple[Path, GitWildMatchPattern]] = []
     with open(gitignore_path, encoding="utf-8") as f:
-        gitignore = pathspec.PathSpec.from_lines(GitWildMatchPattern, f.readlines())
-    return gitignore
+        # PathSpec を使って各行をパターン化し、pattern.include も保持する
+        spec = pathspec.PathSpec.from_lines(GitWildMatchPattern, f)
+        patterns.extend((directory, p) for p in spec.patterns)
+    return patterns
 
 
-def should_ignore_file(
-    path: Path, base_dir: Path, gitignore: pathspec.PathSpec | None
+def is_ignored_by_gitignore(
+    path: Path, patterns: list[tuple[Path, GitWildMatchPattern]]
 ) -> bool:
     """
-    指定されたファイルが .gitignore のパターンに一致するかどうかを判定します。
+    .gitignore の評価順に従い、最後にマッチしたルールで判定する。
+    patterns は (その .gitignore が置かれたディレクトリ, パターン) の順序付きリスト。
     """
-    if gitignore is None:
-        return False
+    ignored = False
+    for base_dir, pattern in patterns:
+        try:
+            relative_path = path.relative_to(base_dir).as_posix()
+        except ValueError:
+            # base_dir の配下でなければスキップ
+            continue
 
-    # ファイルパスをbase_dirからの相対パスに変換
-    # Windowsでも常にPOSIX形式のパス（フォワードスラッシュ）を使用
-    relative_path = path.relative_to(base_dir).as_posix()
-    return gitignore.match_file(relative_path)
+        # ディレクトリ専用パターン（末尾スラッシュ）にもヒットするように末尾スラッシュ付きも試す
+        candidates = [relative_path]
+        if path.is_dir():
+            candidates.append(f"{relative_path}/")
+
+        if any(pattern.match_file(candidate) for candidate in candidates):
+            # include=True は negation（!）を意味する
+            ignored = not pattern.include
+    return ignored
 
 
 def encrypt_filename(filename: str, fernet: Fernet) -> str:
@@ -236,19 +249,34 @@ def create_secure_encrypted_zip(
                     f"ファイル '{target}' を '{zip_filename}' にパスワード付きで暗号化・圧縮しました。"
                 )
             elif target.is_dir():
-                # .gitignore の読み込み
-                gitignore = load_gitignore(target)
-                if gitignore:
-                    print(
-                        f".gitignore ファイルを読み込みました: {target / '.gitignore'}"
-                    )
+                # ネストした .gitignore を含め評価するためのパターンリスト
+                gitignore_patterns: list[tuple[Path, GitWildMatchPattern]] = []
 
-                for root, _, files in os.walk(target):
+                for root, dirnames, files in os.walk(target, topdown=True):
                     root_path = Path(root)
+
+                    # 現在のディレクトリの .gitignore を追加（順序を維持）
+                    gitignore_patterns.extend(load_gitignore_patterns(root_path))
+
+                    # .git ディレクトリは常に除外
+                    dirnames[:] = [d for d in dirnames if d != ".git"]
+
+                    # .gitignore で除外されたディレクトリは探索しない
+                    filtered_dirs: list[str] = []
+                    for dirname in dirnames:
+                        dir_path = root_path / dirname
+                        if is_ignored_by_gitignore(dir_path, gitignore_patterns):
+                            print(
+                                f"除外: {dir_path.relative_to(target)} (.gitignore に一致)"
+                            )
+                            continue
+                        filtered_dirs.append(dirname)
+                    dirnames[:] = filtered_dirs
+
                     for file in files:
                         file_path = root_path / file
                         # .gitignore と一致するファイルはスキップ
-                        if should_ignore_file(file_path, target, gitignore):
+                        if is_ignored_by_gitignore(file_path, gitignore_patterns):
                             print(
                                 f"除外: {file_path.relative_to(target)} (.gitignore に一致)"
                             )
