@@ -602,3 +602,96 @@ def test_zip_with_relative_path(
     decrypted_file = extract_dir / "data.txt"
     assert decrypted_file.exists()
     assert decrypted_file.read_text() == "test data"
+
+
+def test_create_encrypted_zip_excludes_git_directory(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
+    """Check that .git directory is excluded from the zip file."""
+    monkeypatch.setattr("getpass.getpass", lambda _: "test_password")
+
+    test_dir = tmp_path / "repo_with_git"
+    test_dir.mkdir()
+    (test_dir / "file.txt").write_text("content")
+
+    # Create .git directory and file
+    git_dir = test_dir / ".git"
+    git_dir.mkdir()
+    (git_dir / "config").write_text("git config")
+
+    # Create sub-directory with .git folder (should also be excluded theoretically, though usually only root .git matters, but for safety let's check)
+    # Actually most git usage is root, but submodules have .git files.
+    # Current implementation excludes any directory named .git.
+    sub_dir = test_dir / "subdir"
+    sub_dir.mkdir()
+    (sub_dir / ".git").mkdir()
+    (sub_dir / ".git" / "HEAD").write_text("ref: refs/heads/main")
+
+    zip_output = tmp_path / "repo.zip"
+    create_secure_encrypted_zip(test_dir, zip_output)
+
+    extract_dir = tmp_path / "extracted_repo"
+    extract_secure_encrypted_zip(zip_output, extract_dir)
+
+    # Verify .git is not present
+    assert (extract_dir / "file.txt").exists()
+    assert not (extract_dir / ".git").exists()
+    assert not (extract_dir / "subdir" / ".git").exists()
+
+
+def test_create_encrypted_zip_nested_gitignore_precedence(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
+    """
+    Verify that nested .gitignore files are respected correctly
+    and patterns are scoped to their directories.
+    """
+    monkeypatch.setattr("getpass.getpass", lambda _: "test_password")
+
+    root = tmp_path / "nested_ignore_test"
+    root.mkdir()
+
+    # Root .gitignore
+    (root / ".gitignore").write_text("*.log\n")
+    (root / "root.log").write_text("should be ignored")
+    (root / "root.txt").write_text("should be kept")
+
+    # Subdir A: defines local ignore
+    dir_a = root / "dir_a"
+    dir_a.mkdir()
+    (dir_a / ".gitignore").write_text("ignore_me.txt\n")
+    (dir_a / "ignore_me.txt").write_text("should be ignored in A")
+    (dir_a / "keep_me.txt").write_text("should be kept in A")
+    (dir_a / "sub.log").write_text("should be ignored by root rule")
+
+    # Subdir B: defines negation! (override root rule?)
+    # Note: explicit inclusion (!) usually overrides previous excludes.
+    # But gitignore rules cascading is complex throughout directories.
+    # Usually a deeper .gitignore can override a parent one if using !.
+    dir_b = root / "dir_b"
+    dir_b.mkdir()
+    (dir_b / ".gitignore").write_text("!important.log\n")
+    (dir_b / "important.log").write_text("should be kept despite root *.log")
+    (dir_b / "other.log").write_text("should still be ignored")
+
+    zip_output = tmp_path / "nested.zip"
+    create_secure_encrypted_zip(root, zip_output)
+
+    extract_dir = tmp_path / "extracted_nested"
+    extract_secure_encrypted_zip(zip_output, extract_dir)
+
+    # Assertions
+    assert (extract_dir / "root.txt").exists()
+    assert not (extract_dir / "root.log").exists()
+
+    assert (extract_dir / "dir_a" / "keep_me.txt").exists()
+    assert not (extract_dir / "dir_a" / "ignore_me.txt").exists()
+    assert not (extract_dir / "dir_a" / "sub.log").exists()
+
+    # Current implementation might not support ! overrides from child gitignore completely if not careful,
+    # but let's test if it works with our recursive logic.
+    # Our logic combines [parent_patterns] + [current_patterns].
+    # pathspec usually handles the list in order, later patterns overriding earlier ones.
+    # So !important.log in dir_b should override *.log from root.
+    assert (extract_dir / "dir_b" / "important.log").exists()
+    assert not (extract_dir / "dir_b" / "other.log").exists()

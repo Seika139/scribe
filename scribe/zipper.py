@@ -106,8 +106,10 @@ def is_ignored_by_gitignore(
             candidates.append(f"{relative_path}/")
 
         if any(pattern.match_file(candidate) for candidate in candidates):
-            # include=True は negation（!）を意味する
-            ignored = not pattern.include
+            # include=True は 「このパターンにマッチする」 という意味
+            # .gitignore の仕様では、マッチしたらその行の include (除外) or exclude (許可 - !) が適用される
+            # PathSpec の GitWildMatchPattern.include は、そのパターンが「除外ファイル(True)」か「除外しないファイル(False, !付き)」かを示す
+            ignored = pattern.include
     return ignored
 
 
@@ -229,6 +231,46 @@ def create_secure_encrypted_zip(
             {}
         )  # キー: 元のファイル名, 値: 暗号化されたファイル名
 
+        # 内部関数で再帰的に処理
+        def _process_directory(
+            current_path: Path,
+            parent_patterns: list[tuple[Path, GitWildMatchPattern]],
+            zf: zipfile.ZipFile,
+        ) -> None:
+            # .git ディレクトリは除外
+            if current_path.name == ".git":
+                return
+
+            # 現在のディレクトリの .gitignore を読み込み、親からのパターンに追加
+            current_patterns = list(parent_patterns)
+            current_patterns.extend(load_gitignore_patterns(current_path))
+
+            # ディレクトリ内のアイテムを走査
+            for item in current_path.iterdir():
+                # .gitignore で除外されているかチェック
+                if is_ignored_by_gitignore(item, current_patterns):
+                    print(f"除外: {item.relative_to(target)} (.gitignore に一致)")
+                    continue
+
+                if item.is_dir():
+                    _process_directory(item, current_patterns, zf)
+                elif item.is_file():
+                    # OSに依存しない形式でパスを扱う
+                    relative_path = item.relative_to(target).as_posix()
+                    if encrypt_filenames:
+                        encrypted_name = encrypt_filename(
+                            relative_path, metadata_fernet
+                        )
+                    else:
+                        encrypted_name = relative_path
+
+                    # file_mappingの保存
+                    file_mapping[relative_path] = encrypted_name
+
+                    salt, encrypted_bytes = encrypt_file(item, password_bytes)
+                    zf.writestr(f"{encrypted_name}.salt", salt)
+                    zf.writestr(f"{encrypted_name}.encrypted", encrypted_bytes)
+
         with zipfile.ZipFile(
             zip_filename, "w", zipfile.ZIP_DEFLATED, compresslevel=9
         ) as zf:
@@ -249,54 +291,7 @@ def create_secure_encrypted_zip(
                     f"ファイル '{target}' を '{zip_filename}' にパスワード付きで暗号化・圧縮しました。"
                 )
             elif target.is_dir():
-                # ネストした .gitignore を含め評価するためのパターンリスト
-                gitignore_patterns: list[tuple[Path, GitWildMatchPattern]] = []
-
-                for root, dirnames, files in os.walk(target, topdown=True):
-                    root_path = Path(root)
-
-                    # 現在のディレクトリの .gitignore を追加（順序を維持）
-                    gitignore_patterns.extend(load_gitignore_patterns(root_path))
-
-                    # .git ディレクトリは常に除外
-                    dirnames[:] = [d for d in dirnames if d != ".git"]
-
-                    # .gitignore で除外されたディレクトリは探索しない
-                    filtered_dirs: list[str] = []
-                    for dirname in dirnames:
-                        dir_path = root_path / dirname
-                        if is_ignored_by_gitignore(dir_path, gitignore_patterns):
-                            print(
-                                f"除外: {dir_path.relative_to(target)} (.gitignore に一致)"
-                            )
-                            continue
-                        filtered_dirs.append(dirname)
-                    dirnames[:] = filtered_dirs
-
-                    for file in files:
-                        file_path = root_path / file
-                        # .gitignore と一致するファイルはスキップ
-                        if is_ignored_by_gitignore(file_path, gitignore_patterns):
-                            print(
-                                f"除外: {file_path.relative_to(target)} (.gitignore に一致)"
-                            )
-                            continue
-
-                        # OSに依存しない形式でパスを扱うよう修正
-                        relative_path = file_path.relative_to(target).as_posix()
-                        if encrypt_filenames:
-                            encrypted_name = encrypt_filename(
-                                relative_path, metadata_fernet
-                            )
-                        else:
-                            encrypted_name = relative_path
-
-                        # file_mappingのキーを元のファイル名に変更
-                        file_mapping[relative_path] = encrypted_name
-
-                        salt, encrypted_bytes = encrypt_file(file_path, password_bytes)
-                        zf.writestr(f"{encrypted_name}.salt", salt)
-                        zf.writestr(f"{encrypted_name}.encrypted", encrypted_bytes)
+                _process_directory(target, [], zf)
 
                 print(
                     f"ディレクトリ '{target}' を '{zip_filename}' にパスワード付きで暗号化・圧縮しました。"
