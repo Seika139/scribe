@@ -17,7 +17,9 @@
 - [0.1.1](https://github.com/Seika139/scribe/compare/v0.1.0...v0.1.1)
 - [0.1.0](https://github.com/Seika139/scribe/releases/tag/v0.1.0)
 
-## Unreleased
+## [Unreleased]
+
+## [1.0.0] - 2025-12-10
 
 ### Added
 
@@ -25,7 +27,7 @@
 
 ### Changed
 
-- 依存管理を Poetry から uvに切り替え、Python 3.13 を前提としたプロジェクト設定に更新
+- 依存管理を Poetry から uv に切り替え、Python 3.13 を前提としたプロジェクト設定に更新
 - 暗号化 ZIP 作成時に `.git` 配下を自動的に除外するようにしました
 - 暗号化 ZIP 作成時に `.gitignore` をディレクトリ単位で再帰的に適用し、除外ルールを強化しました
 
