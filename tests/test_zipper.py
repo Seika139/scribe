@@ -3,7 +3,6 @@ import binascii
 import json
 import re
 import shutil
-import sys
 from pathlib import Path
 from zipfile import ZipFile
 
@@ -949,13 +948,17 @@ def test_auto_zip_filename_collision(
     assert second.name == "collision_encrypted_1.zip"
 
 
-@pytest.mark.skipif(
-    sys.platform != "linux", reason="Case sensitivity is file system dependent"
-)
 def test_gitignore_case_sensitive(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     """.gitignore が Linux 想定で大文字小文字を区別することを確認"""
+    # 実行時にファイルシステムが大文字小文字を区別するかチェック
+    case_check = tmp_path / "CaseCheck"
+    case_check.touch()
+    is_case_insensitive = (tmp_path / "casecheck").exists()
+    case_check.unlink()
+    if is_case_insensitive:
+        pytest.skip("このテストには大文字小文字を区別するファイルシステムが必要です。")
     monkeypatch.setattr("getpass.getpass", lambda _: "test_password")
     root = tmp_path / "case"
     root.mkdir()
