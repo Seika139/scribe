@@ -3,6 +3,7 @@ import binascii
 import json
 import re
 import shutil
+import sys
 from pathlib import Path
 from zipfile import ZipFile
 
@@ -948,6 +949,9 @@ def test_auto_zip_filename_collision(
     assert second.name == "collision_encrypted_1.zip"
 
 
+@pytest.mark.skipif(
+    sys.platform != "linux", reason="Case sensitivity is file system dependent"
+)
 def test_gitignore_case_sensitive(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
