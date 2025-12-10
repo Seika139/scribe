@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # ruff: noqa: PLR1702, TRY301
 
 import base64
