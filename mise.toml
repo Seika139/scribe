@@ -1,0 +1,140 @@
+[vars]
+python_version = "$(cat .python-version 2>/dev/null || echo 'Error: .python-version not found')"
+uv = 'uv'
+text_red = '\033[0;31m'
+text_green = '\033[0;32m'
+text_yellow = '\033[0;33m'
+text_blue = '\033[0;34m'
+text_magenta = '\033[0;35m'
+text_cyan = '\033[0;36m'
+text_white = '\033[0;37m'
+text_reset = '\033[0m'
+
+########################
+# 環境構築・初期化タスク #
+########################
+
+[tasks.init]
+description = "初期化処理（仮想環境を作成し、依存関係をインストール）"
+shell = "bash -c"
+quiet = true
+depends = ["venv"]
+run = '''
+if [ -d "{{env.MISE_CONFIG_ROOT}}/.venv" ] \
+  && [ ! -f "{{env.MISE_CONFIG_ROOT}}/.venv/bin/python" ] \
+  && [ ! -f "{{env.MISE_CONFIG_ROOT}}/.venv/Scripts/python.exe" ]; then
+  echo "virtual environment is broken. Recreating..."
+  mise run reset-venv
+fi
+
+{{vars.uv}} lock
+{{vars.uv}} sync --all-extras
+
+printf "✅ プロジェクトの初期化が完了しました"
+'''
+
+[tasks.venv]
+description = "uvを利用して仮想環境を作成します"
+shell = "bash -c"
+quiet = true
+hide = true
+run = '''
+if [ ! -d "{{env.MISE_CONFIG_ROOT}}/.venv" ]; then
+  echo "Creating .venv with Python {{vars.python_version}} ..."
+  {{vars.uv}} venv --python {{vars.python_version}} --clear
+else
+  echo "Use existing .venv"
+fi
+'''
+
+[tasks.reset-venv]
+description = "仮想環境をリセットします"
+shell = "bash -c"
+quiet = true
+run = '''
+echo "Resetting .venv ..."
+venv_dir="{{env.MISE_CONFIG_ROOT}}/.venv"
+if [ -d "$venv_dir" ]; then
+  echo "Removing existing .venv ...";
+  chmod -R +w "$venv_dir" 2>/dev/null || true;
+  find "$venv_dir" -type l -delete 2>/dev/null || true;
+  find "$venv_dir" -type f -exec chmod +w {} \; 2>/dev/null || true;
+  rm -rf "$venv_dir" 2>/dev/null || sudo rm -rf "$venv_dir" || true;
+fi
+{{vars.uv}} venv --python {{vars.python_version}} --clear
+echo "done. Run 'mise run init' to sync dependencies."
+'''
+
+[tasks.upgrade]
+description = "依存関係を最新のバージョンにアップグレードします"
+shell = "bash -c"
+quiet = true
+depends = ["venv"]
+run = '''
+{{vars.uv}} sync --upgrade --all-extras
+printf "✅ 依存関係のアップグレードが完了しました\n"
+'''
+
+######################
+# Code Quality Tasks #
+######################
+
+[tasks.check]
+description = "コードの静的解析とテストを実行します"
+shell = "bash -c"
+quiet = true
+run = '''
+printf "{{vars.text_yellow}}%s{{vars.text_reset}}\n" "Running ruff check..."
+{{vars.uv}} run ruff check .
+printf "{{vars.text_yellow}}%s{{vars.text_reset}}\n" "Running mypy..."
+{{vars.uv}} run mypy .
+printf "{{vars.text_yellow}}%s{{vars.text_reset}}\n" "Running pytest..."
+{{vars.uv}} run pytest tests/
+'''
+
+[tasks.format]
+description = "コードのフォーマットを実行します"
+shell = "bash -c"
+quiet = true
+run = '''
+{{vars.uv}} run ruff format .
+{{vars.uv}} run ruff check . --fix
+'''
+
+[tasks.ruff-clean]
+description = "Ruff のキャッシュを削除します"
+shell = "bash -c"
+quiet = true
+run = '''
+{{vars.uv}} run ruff clean
+'''
+
+#######################
+# Encrypt And Decrypt #
+#######################
+
+[tasks.encrypt]
+description = "ファイル・フォルダを暗号化します"
+shell = "bash -c"
+quiet = true
+run = '''
+TARGET={{arg(name="target", description="暗号化するフォルダのパス")}}
+if [[ ! -e "$TARGET" ]]; then
+  echo "Error: target '$TARGET' is not a file or directory"
+  exit 1
+fi
+{{vars.uv}} run python scribe/zipper.py -e -c "$TARGET"
+'''
+
+[tasks.decrypt]
+description = "ファイル・フォルダを復号化します"
+shell = "bash -c"
+quiet = true
+run = '''
+TARGET={{arg(name="target", description="復号化するフォルダのパス")}}
+if [[ ! -e "$TARGET" ]]; then
+  echo "Error: target '$TARGET' is not a file or directory"
+  exit 1
+fi
+{{vars.uv}} run python scribe/zipper.py -x "$TARGET"
+'''
