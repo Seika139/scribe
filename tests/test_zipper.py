@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import base64
 import binascii
 import json
@@ -953,6 +952,13 @@ def test_gitignore_case_sensitive(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     """.gitignore が Linux 想定で大文字小文字を区別することを確認"""
+    # 実行時にファイルシステムが大文字小文字を区別するかチェック
+    case_check = tmp_path / "CaseCheck"
+    case_check.touch()
+    is_case_insensitive = (tmp_path / "casecheck").exists()
+    case_check.unlink()
+    if is_case_insensitive:
+        pytest.skip("このテストには大文字小文字を区別するファイルシステムが必要です。")
     monkeypatch.setattr("getpass.getpass", lambda _: "test_password")
     root = tmp_path / "case"
     root.mkdir()
