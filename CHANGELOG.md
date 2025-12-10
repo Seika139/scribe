@@ -19,6 +19,8 @@
 
 ## [Unreleased]
 
+## [1.0.0] - 2025-12-10
+
 ### Added
 
 - `mise run init|check|format` などのタスクを追加し、`uv` ベースで環境構築・Lint・テストを一括実行できるようにした
