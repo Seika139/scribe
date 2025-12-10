@@ -439,9 +439,7 @@ def extract_secure_encrypted_zip(  # noqa: C901, PLR0912
                     temp_encrypted = extract_dir / "temp_encrypted"
 
                     # Windows/Posix いずれの区切りでも正しく展開できるよう正規化
-                    normalized = original_path.replace("\\", "/").replace(
-                        "/", os.sep
-                    )
+                    normalized = original_path.replace("\\", "/").replace("/", os.sep)
                     norm_path = Path(normalized)
                     output_file_path = extract_dir / norm_path
 

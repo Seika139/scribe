@@ -83,6 +83,12 @@ jobs:
             --version "$RELEASE_VERSION" \
             --date "$RELEASE_DATE"
 
+      - name: Update version in README
+        run: |
+          python .github/scripts/update_readme_version.py \
+            --readme README.md \
+            --version "$RELEASE_VERSION"
+
       - name: Configure git user
         run: |
           git config user.name "github-actions[bot]"
@@ -90,7 +96,7 @@ jobs:
 
       - name: Commit changes
         run: |
-          git add pyproject.toml CHANGELOG.md uv.lock
+          git add pyproject.toml CHANGELOG.md uv.lock README.md
           git commit -m "chore: prepare release $RELEASE_VERSION"
 
       - name: Create annotated tag
