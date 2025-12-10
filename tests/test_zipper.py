@@ -19,6 +19,7 @@ from scribe.zipper import (
 )
 
 
+# パスワードから鍵とソルトが適切な形式で生成されることを検証
 def test_generate_key_from_password() -> None:
     password = b"test_password"
     key, salt = generate_key_from_password(password)
@@ -28,6 +29,7 @@ def test_generate_key_from_password() -> None:
     assert len(salt) == 16
 
 
+# 単一ファイルの暗号化→復号で内容が保持されることを確認
 def test_encrypt_decrypt_file(tmp_path: Path) -> None:
     password = b"test_password"
     input_file = tmp_path / "test_file.txt"
@@ -41,6 +43,7 @@ def test_encrypt_decrypt_file(tmp_path: Path) -> None:
     assert decrypted_file.read_text() == "test data"
 
 
+# 単一ファイルをZIP化・復号して元通りになる統合フローをテスト
 def test_create_extract_secure_encrypted_zip(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
@@ -61,6 +64,7 @@ def test_create_extract_secure_encrypted_zip(
     assert extracted_file.read_text() == "test data"
 
 
+# ディレクトリ丸ごとをZIP化・復号した際に内容が保持されることをテスト
 def test_create_extract_secure_encrypted_zip_directory(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
@@ -119,6 +123,7 @@ def test_extract_secure_encrypted_zip_wrong_password(
             shutil.rmtree(extract_dir)
 
 
+# ZIP名自動生成ロジック（省略時）の挙動を確認
 def test_create_secure_encrypted_zip_automatic_filename(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
@@ -132,6 +137,7 @@ def test_create_secure_encrypted_zip_automatic_filename(
     zip_filename.unlink()
 
 
+# 存在しないパス指定時に FileNotFoundError を返すことを確認
 def test_create_secure_encrypted_zip_invalid_target(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
@@ -151,6 +157,7 @@ def test_create_secure_encrypted_zip_invalid_target(
             encrypted_zip.unlink()
 
 
+# ZIP内部にソルトと暗号化ファイルが含まれることを検証
 def test_secure_encrypted_zip_content(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
@@ -168,6 +175,7 @@ def test_secure_encrypted_zip_content(
         assert "info.txt.encrypted" in namelist
 
 
+# .gitignore を解釈して除外・許可が正しく働くかを確認
 def test_create_encrypted_zip_with_gitignore(
     monkeypatch: MonkeyPatch, tmp_path: Path
 ) -> None:
@@ -250,6 +258,7 @@ cache/
             print(f"クリーンアップ中にエラーが発生しました: {e}")
 
 
+# .gitignore が無い場合は全ファイルを含めることを確認
 def test_create_encrypted_zip_without_gitignore(
     monkeypatch: MonkeyPatch, tmp_path: Path
 ) -> None:
@@ -299,6 +308,7 @@ def test_create_encrypted_zip_without_gitignore(
             print(f"クリーンアップ中にエラーが発生しました: {e}")
 
 
+# ファイル名の暗号化・復号が各種文字列で双方向に成立することを確認
 def test_filename_encryption_decryption(tmp_path: Path) -> None:
     """ファイル名の暗号化と復号化のテスト"""
     # キーの生成
@@ -325,6 +335,7 @@ def test_filename_encryption_decryption(tmp_path: Path) -> None:
     assert decrypted_name_jp == original_name_jp
 
 
+# ファイル名暗号化メタデータを含むZIPの作成と復号を総合的に検証
 def test_create_extract_secure_encrypted_zip_with_filename_encryption(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
@@ -380,6 +391,7 @@ def test_create_extract_secure_encrypted_zip_with_filename_encryption(
     assert (extract_dir / "テスト.txt").read_text() == "日本語テスト"
 
 
+# ファイル名を暗号化した場合でも推測不能・復号可能であることを検証
 def test_create_extract_secure_encrypted_zip_with_encrypted_filenames(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
@@ -470,6 +482,7 @@ def test_create_extract_secure_encrypted_zip_with_encrypted_filenames(
         print(f"クリーンアップ中にエラーが発生しました: {e}")
 
 
+# 暗号化後のファイル名が漏洩しない・復号で戻ることを検証
 def test_filename_encryption_security(tmp_path: Path) -> None:
     """ファイル名の暗号化セキュリティテスト"""
     # キーの生成
@@ -516,6 +529,7 @@ def test_filename_encryption_security(tmp_path: Path) -> None:
         assert decrypted_name == original_name
 
 
+# 暗号化ZIPでない場合にエラーを出し、何も展開しないことを確認
 def test_extract_non_encrypted_zip(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
@@ -540,6 +554,7 @@ def test_extract_non_encrypted_zip(
     assert not any(extract_dir.iterdir())
 
 
+# 既存ファイルがあるディレクトリへ展開しても上書きせず共存することを確認
 def test_extract_with_existing_files(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
@@ -574,6 +589,7 @@ def test_extract_with_existing_files(
     assert decrypted_file.read_text() == "secret content"
 
 
+# 相対パス指定の出力ファイルが期待場所に作成されることを確認
 def test_zip_with_relative_path(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
@@ -604,6 +620,7 @@ def test_zip_with_relative_path(
     assert decrypted_file.read_text() == "test data"
 
 
+# .git ディレクトリが除外されることを検証
 def test_create_encrypted_zip_excludes_git_directory(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
@@ -639,6 +656,7 @@ def test_create_encrypted_zip_excludes_git_directory(
     assert not (extract_dir / "subdir" / ".git").exists()
 
 
+# ネストした .gitignore の優先順位と否定パターンの扱いを確認
 def test_create_encrypted_zip_nested_gitignore_precedence(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
@@ -695,3 +713,83 @@ def test_create_encrypted_zip_nested_gitignore_precedence(
     # So !important.log in dir_b should override *.log from root.
     assert (extract_dir / "dir_b" / "important.log").exists()
     assert not (extract_dir / "dir_b" / "other.log").exists()
+
+
+def test_gitignore_negation_and_gitkeep(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
+    """envs/* 除外 + !envs/.gitkeep など、手動確認したパターンを再現して検証"""
+    monkeypatch.setattr("getpass.getpass", lambda _: "test_password")
+
+    root = tmp_path / "sample_ignore"
+    root.mkdir()
+
+    # ルート .gitignore: envs 以下を除外しつつ .gitkeep を再包含、.cache も除外
+    (root / ".gitignore").write_text(".cache\nenvs/*\n!envs/.gitkeep\n", encoding="utf-8")
+
+    # ファイル・ディレクトリを配置
+    (root / "sample.py").write_text("print('ok')", encoding="utf-8")
+    envs = root / "envs"
+    envs.mkdir()
+    (envs / ".gitkeep").write_text("", encoding="utf-8")
+    (envs / "secret.env").write_text("SECRET=1", encoding="utf-8")  # 除外される想定
+
+    secrets = root / "secrets"
+    secrets.mkdir()
+    # サブディレクトリ独自の .gitignore: .gitkeep を残して *.txt を除外
+    (secrets / ".gitignore").write_text("!.gitkeep\n*.txt\n", encoding="utf-8")
+    (secrets / ".gitkeep").write_text("", encoding="utf-8")
+    (secrets / "secret.txt").write_text("top secret", encoding="utf-8")  # 除外される想定
+
+    # .cache のファイルとディレクトリも配置
+    cache_dir = root / ".cache"
+    cache_dir.mkdir()
+    (cache_dir / "cache.txt").write_text("cached", encoding="utf-8")
+    sub = root / "sub"
+    sub.mkdir()
+    (sub / ".cache").write_text("cached file", encoding="utf-8")
+
+    zip_path = tmp_path / "sample_ignore.zip"
+    create_secure_encrypted_zip(root, zip_path)
+
+    extract_dir = tmp_path / "extracted_sample_ignore"
+    extract_secure_encrypted_zip(zip_path, extract_dir)
+
+    # 期待される包含/除外を確認
+    assert (extract_dir / "sample.py").exists()
+    assert (extract_dir / "envs" / ".gitkeep").exists()
+    assert not (extract_dir / "envs" / "secret.env").exists()
+    assert (extract_dir / "secrets" / ".gitkeep").exists()
+    assert not (extract_dir / "secrets" / "secret.txt").exists()
+    assert not (extract_dir / ".cache").exists()
+    assert not (extract_dir / "sub" / ".cache").exists()
+
+
+def test_gitignore_cache_excludes_directory_and_file(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    """.gitignore の '.cache' エントリがファイル/ディレクトリ双方を除外することを検証"""
+    monkeypatch.setattr("getpass.getpass", lambda _: "test_password")
+
+    root = tmp_path / "cache_test"
+    root.mkdir()
+    (root / ".gitignore").write_text(".cache\n", encoding="utf-8")
+
+    (root / "keep.txt").write_text("keep", encoding="utf-8")
+
+    cache_dir = root / ".cache"
+    cache_dir.mkdir()
+    (cache_dir / "data.txt").write_text("cache dir content", encoding="utf-8")
+
+    sub = root / "sub"
+    sub.mkdir()
+    (sub / ".cache").write_text("cache file", encoding="utf-8")
+
+    zip_path = tmp_path / "cache_test.zip"
+    create_secure_encrypted_zip(root, zip_path)
+
+    extract_dir = tmp_path / "extracted_cache_test"
+    extract_secure_encrypted_zip(zip_path, extract_dir)
+
+    # .cache ディレクトリと .cache ファイルが展開されていないことを確認
+    assert (extract_dir / "keep.txt").exists()
+    assert not (extract_dir / ".cache").exists()
+    assert not (extract_dir / "sub" / ".cache").exists()
