@@ -9,8 +9,11 @@
   <a href="./LICENSE">
     <img alt="LICENSE" src="https://img.shields.io/badge/license-MIT-blue.svg">
   </a>
-  <a href="https://github.com/Seika139/scribe/actions/workflows/ci.yml">
-    <img alt="CI" src="https://github.com/Seika139/scribe/actions/workflows/ci.yml/badge.svg">
+  <a href="https://github.com/Seika139/scribe/actions/workflows/qualify.yml">
+    <img alt="CI" src="https://github.com/Seika139/scribe/actions/workflows/qualify.yml/badge.svg">
+  </a>
+  <a href="https://github.com/Seika139/scribe/actions/workflows/lint-markdown.yml">
+    <img alt="Markdown Lint" src="https://github.com/Seika139/scribe/actions/workflows/lint-markdown.yml/badge.svg">
   </a>
   <a href="https://github.com/Seika139/scribe/releases/tag/v1.0.0">
     <img alt="version" src="https://img.shields.io/badge/version-v1.0.0-white.svg">
