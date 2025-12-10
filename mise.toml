@@ -10,6 +10,10 @@ text_cyan = '\033[0;36m'
 text_white = '\033[0;37m'
 text_reset = '\033[0m'
 
+[env]
+DOCKER_BUILDKIT = "1"
+COMPOSE_DOCKER_CLI_BUILD = "1"
+
 ########################
 # 環境構築・初期化タスク #
 ########################
@@ -137,4 +141,83 @@ if [[ ! -e "$TARGET" ]]; then
   exit 1
 fi
 {{vars.uv}} run python scribe/zipper.py -x "$TARGET"
+'''
+
+################################################
+# Multiple Python Version Support using Docker #
+################################################
+[tasks.docker-build]
+description = "compose build（コード変更時のみ再ビルド、BuildKitキャッシュ利用）"
+shell = "bash -c"
+quiet = true
+sources = [
+  "Docker/Dockerfile",
+  "Docker/compose.yml",
+  "pyproject.toml",
+  "uv.lock",
+  "scribe/**/*",
+  "tests/**/*",
+]
+outputs = ["Docker/.cache/build_cache"]
+run = '''
+state_dir="Docker/.cache"
+mkdir -p "$state_dir"
+
+# BuildKit のローカルキャッシュを共有しつつビルド
+docker compose --progress=plain -f Docker/compose.yml build \
+  --build-arg BUILDKIT_INLINE_CACHE=1
+
+date > "$state_dir/build_cache"
+'''
+
+[tasks.docker-up]
+description = "docker コンテナを起動します"
+shell = "bash -c"
+quiet = true
+depends = ["docker-build"]
+sources = ["Docker/compose.yml", "Docker/.cache/build_cache"]
+outputs = ["Docker/.cache/run_cache"]
+run = '''
+mkdir -p Docker/.cache
+docker compose -f Docker/compose.yml down --volumes --remove-orphans
+docker compose -f Docker/compose.yml up --detach --wait
+date > Docker/.cache/run_cache
+'''
+
+[tasks.docker-test]
+description = "docker コンテナ上でコードの静的解析とテストを実行します"
+shell = "bash -c"
+quiet = true
+depends = ["docker-up"]
+run = '''
+versions=("3.10" "3.11" "3.12" "3.13")
+for version in ${versions[@]}; do
+  printf "{{vars.text_cyan}}%s{{vars.text_reset}}\n" "=== Testing on Python $version ==="
+  service=python_${version//./_}
+  docker compose -f Docker/compose.yml exec "$service" bash -c '
+    set -e
+    uv run ruff check .
+    uv run mypy .
+    uv run pytest tests/
+  '
+done
+'''
+
+[tasks.docker-down]
+description = "docker コンテナを停止します"
+shell = "bash -c"
+quiet = true
+run = '''
+docker compose -f Docker/compose.yml down --volumes --remove-orphans || true
+rm -f Docker/.cache/run_cache
+'''
+
+[tasks.docker-clean]
+description = "docker ビルドキャッシュとコンテナを削除します"
+shell = "bash -c"
+quiet = true
+run = '''
+docker compose -f Docker/compose.yml down --rmi all --volumes --remove-orphans || true
+docker builder prune --force
+rm -rf Docker/.cache
 '''

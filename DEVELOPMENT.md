@@ -2,46 +2,35 @@
 
 ## Dependencies
 
-- `Python`: 3.10 or higher
-- `poetry`: This project uses Poetry for dependency management.
+- `Python`: >=3.10, <=3.13
+- `uv`: This project uses uv for dependency management.
 
 ## Recommended Packages
 
-- `make`: Run `make` commands to simplify the development process.
+- `mise`: Run `mise` commands to simplify the development process.
 - `Docker`: Tests can be run in a Docker container.
 
 ## Development Setup
 
 ```bash
 # After cloning the repository
-poetry install --group dev
+mise init
 ```
 
 ## Coding Style
 
-use `black` for formatting and `isort` for import sorting.
-use `flake8` for linting and `mypy` for type checking.
-
 ```bash
-# formatting
-make format
+# format code with ruff
+mise format
 
-# linting & type checking
-make check
+
+# ruff check & mypy type check & pytest
+mise check
 ```
-
-## Tests
-
-`make test` run `pytest` in both local and Docker environments.
-If you want to run `pytest` in a Docker container, you can use `make test-docker`.
-If you want to run `pytest` in your local environment, you can use `make test-local`.
-
-After finishing the tests, remove the Docker container with `make down`.
-Also, you can run `make clean` to remove all Docker containers and images.
 
 ## CI
 
-CI which is configured in [.github/workflows/ci.yml](https://github.com/Seika139/scribe/actions/workflows/ci.yml) will be triggered on push or pull request to the main branch.
+CI which is configured in [.github/workflows/qualify.yml](https://github.com/Seika139/scribe/actions/workflows/qualify.yml) will be triggered on push or pull request to the main branch.
 
 ## Git Commit Guidelines
 

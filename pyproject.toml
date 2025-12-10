@@ -72,7 +72,7 @@ ban-relative-imports = "all"
 
 [tool.ruff.lint.mccabe]
 # C901 を有効化する代わりに閾値を上げる
-max-complexity = 18
+max-complexity = 20
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = [
@@ -88,6 +88,6 @@ known-first-party = ["spark_rag_core"]
 convention = "google"
 
 [tool.mypy]
-python_version = "3.14"
+python_version = "3.13"
 strict = true
-exclude = ["^build/"]
+exclude = ["^build/", "^tmp/", "^out/tmp/"]

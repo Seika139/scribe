@@ -20,6 +20,7 @@
 ## Installation
 
 poetry を利用してこのパッケージを利用する場合は以下のコマンドを実行してください。
+uv を利用している場合も同様に poetry を uv に置き換えて実行してください。
 
 ```bash
 poetry add git+https://github.com/Seika139/scribe.git

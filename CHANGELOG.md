@@ -7,10 +7,32 @@
 フォーマットは [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) に基づいており、
 このプロジェクトは [セマンティック バージョニング](https://semver.org/lang/ja/spec/v2.0.0.html) を遵守しています。
 
-## [未リリース]
+## Tagged Releases
 
-### 修正
+- [unreleased](https://github.com/Seika139/scribe/compare/v0.3.1...HEAD)
+- [0.3.1](https://github.com/Seika139/scribe/compare/v0.3.0...v0.3.1)
+- [0.3.0](https://github.com/Seika139/scribe/compare/v0.2.1...v0.3.0)
+- [0.2.1](https://github.com/Seika139/scribe/compare/v0.2.0...v0.2.1)
+- [0.2.0](https://github.com/Seika139/scribe/compare/v0.1.1...v0.2.0)
+- [0.1.1](https://github.com/Seika139/scribe/compare/v0.1.0...v0.1.1)
+- [0.1.0](https://github.com/Seika139/scribe/releases/tag/v0.1.0)
 
+## Unreleased
+
+### Added
+
+- `mise run init|check|format` などのタスクを追加し、`uv` ベースで環境構築・Lint・テストを一括実行できるようにした
+
+### Changed
+
+- 依存管理を Poetry から uvに切り替え、Python 3.13 を前提としたプロジェクト設定に更新
+- 暗号化 ZIP 作成時に `.git` 配下を自動的に除外するようにしました
+- 暗号化 ZIP 作成時に `.gitignore` をディレクトリ単位で再帰的に適用し、除外ルールを強化しました
+
+### Fixed
+
+- 暗号化処理で一時ファイルを作らず直接 ZIP に書き込むようにし、長いパスでも失敗しにくいよう安定性を向上
+- 復号エラー時に例外種別と原因を表示し、トラブルシュートしやすくした
 - Windows でファイルパスが 255 文字を超えると処理が失敗する問題を解消
 
 ## [0.3.1] - 2025-05-01
@@ -34,14 +56,17 @@
 
 ## [0.3.0] - 2025-04-25
 
-### 追加
+### Added
 
 - ファイル名とディレクトリ名の暗号化機能を追加
   - `-e` または `--encrypt-filenames` オプションで有効化可能
   - 日本語を含むファイル名も安全に暗号化
   - メタデータの暗号化による復号化時の自動復元
+- ドキュメント・ユーザーサポートの追加
+  - ファイル名暗号化オプションの使用方法を追加
+  - エラーメッセージと出力メッセージの改善
 
-### 改善
+### Fixed
 
 - エラーメッセージと警告メッセージの表示を改善
 - ファイル名の暗号化と復号化のセキュリティを強化
@@ -51,51 +76,40 @@
 - エラー処理の改善:
   - 非暗号化 ZIP ファイルの検出と適切なエラー表示
   - 既存ファイルの保護と誤削除の防止
-
-### ドキュメント
-
-- ファイル名暗号化オプションの使用方法を追加
-- エラーメッセージと出力メッセージの改善
-
-### セキュリティ
-
 - 解凍時の安全性を向上:
   - 既存ファイルの保護
   - 非暗号化 ZIP ファイルの検証強化
 
 ## [0.2.1] - 2025-04-24
 
-### 追加
+### Added
 
 - .gitignore ファイルの読み込み機能を追加し、圧縮時に除外ルールを適用
 - テストケース: .gitignore のパターンマッチングのテストを追加
+- README.md にバージョン情報とインストール手順を追加
 
-### 改善
+### Fixed
 
 - エラーハンドリングを強化:
   - 不正なファイルパスの検証を追加
   - パスワード不一致時のエラーメッセージを改善
   - 暗号化/復号化失敗時の一時ファイルの自動クリーンアップを実装
 
-### ドキュメント
-
-- README.md にバージョン情報とインストール手順を追加
-
 ## [0.2.0] - 2025-04-23
 
-### 追加
+### Added
 
 - 暗号化を使用したセキュアなファイル圧縮・解凍機能を実装
 - 暗号化キー生成関数のテストケースを追加
 
-### 変更
+### Changed
 
 - 関数の引数フォーマットを改善し、コードの可読性を向上
 - test-local ターゲットで pytest の詳細出力オプションを追加
 
 ## [0.1.1] - 2025-04-21
 
-### 追加
+### Added
 
 - file_sorter.py: ファイルの検索と並べ替え機能を実装
 - Docker 環境のセットアップ:
@@ -106,14 +120,14 @@
   - .editorconfig による改行コードの統一
   - .gitattributes による行末の設定統一
 
-### 変更
+### Changed
 
 - CI: actions/setup-python を v5 に更新
 - DEVELOPMENT.md: 推奨パッケージセクションを追加
 
 ## [0.1.0] - 2025-04-16
 
-### 追加
+### Added
 
 - FileScribe クラス: 複数エンコーディングに対応したファイル読み書き機能
 - CI/CD:
@@ -124,21 +138,13 @@
   - DEVELOPMENT.md: 開発者向けガイドライン
   - ライセンスバッジと CI バッジの追加
 
-### 変更
+### Changed
 
 - Poetry によるプロジェクト管理の導入
 - 依存関係の更新: flake8-pyproject の追加
 - Python バージョン要件を 3.10 以上に更新
 
-### 修正
+### Fixed
 
 - README.md のインストール手順とリポジトリ URL を修正
 - CI ワークフローのアクションバージョンを v4 に更新
-
-[unreleased]: https://github.com/Seika139/scribe/compare/v0.3.1...HEAD
-[0.3.1]: https://github.com/Seika139/scribe/compare/v0.3.0...v0.3.1
-[0.3.0]: https://github.com/Seika139/scribe/compare/v0.2.1...v0.3.0
-[0.2.1]: https://github.com/Seika139/scribe/compare/v0.2.0...v0.2.1
-[0.2.0]: https://github.com/Seika139/scribe/compare/v0.1.1...v0.2.0
-[0.1.1]: https://github.com/Seika139/scribe/compare/v0.1.0...v0.1.1
-[0.1.0]: https://github.com/Seika139/scribe/releases/tag/v0.1.0
