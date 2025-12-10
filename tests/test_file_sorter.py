@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import os
 from pathlib import Path
 
@@ -12,7 +13,11 @@ from scribe.file_sorter import (
 
 @pytest.fixture
 def test_directory(tmp_path: Path) -> Path:
-    """テスト用のディレクトリとファイルを作成するフィクスチャ"""
+    """テスト用のディレクトリとファイルを作成するフィクスチャ。
+
+    Returns:
+        Path: 作成したディレクトリのパス
+    """
     test_dir = tmp_path / "test_files"
     test_dir.mkdir()
 

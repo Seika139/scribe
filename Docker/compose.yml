@@ -2,10 +2,30 @@ name: test_scribe
 
 x-common-build: &common-build
   volumes:
+    # .venv など環境ごとに分けるべきファイルをバインドマウントしないように個別に指定する
     - type: bind
-      source: ..
-      target: /app
+      source: ../scribe
+      target: /app/scribe
+    - type: bind
+      source: ../tests
+      target: /app/tests
+    - type: bind
+      source: ../pyproject.toml
+      target: /app/pyproject.toml
+    - type: bind
+      source: ../uv.lock
+      target: /app/uv.lock
+    - type: bind
+      source: ../README.md
+      target: /app/README.md
+    - type: bind
+      source: ../LICENSE
+      target: /app/LICENSE
   working_dir: /app
+  environment:
+    # .python-version を無視してシステムの Python を使うようにする
+    UV_PYTHON: python
+    UV_PYTHON_PREFERENCE: only-system
 
 services:
   python_3_10:

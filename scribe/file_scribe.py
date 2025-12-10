@@ -1,29 +1,24 @@
+#!/usr/bin/env python3
 from pathlib import Path
 
 
 class FileScribe:
-    """
-    ファイルを読み書きするための基底クラス。
+    """ファイルを読み書きするための基底クラス。
+
     Scribe は日本語で「書記官」を意味する。
     """
 
     def read(self, filepath: str | Path) -> None:
-        """
-        メジャーなエンコーディング（utf-8, shift_jis, ISO-8859-1）でファイルの読み込みを試す。
-        ファイルが見つからない場合、エラーを投げる。
-        読み込んだファイルの内容は self._content に格納される。
+        """複数エンコーディング(utf-8/shift_jis/ISO-8859-1)で読み込みを試行する。
 
-        Parameters
-        ----------
-        filepath : str | Path
-            読み込むファイルのパス
+        読み込めた内容を `self._content` に格納し、失敗時は例外を送出する。
 
-        Raises
-        ------
-        FileNotFoundError
-            ファイルが見つからない場合
-        UnicodeDecodeError
-            utf-8, shift_jis, or ISO-8859-1 のいずれのエンコーディングでもファイルを読み込めなかった場合
+        Args:
+            filepath: 読み込むファイルのパス
+
+        Raises:
+            FileNotFoundError: ファイルが見つからない場合
+            UnicodeDecodeError: いずれのエンコーディングでも読み込めなかった場合
         """
         if isinstance(filepath, str):
             filepath = Path(filepath)
@@ -69,24 +64,19 @@ class FileScribe:
                     if isinstance(last_exception, UnicodeDecodeError)
                     else -1
                 ),
-                "Unable to read the file with utf-8, shift_jis, or ISO-8859-1 encodings.",
+                (
+                    "Unable to read the file with utf-8, shift_jis, or "
+                    "ISO-8859-1 encodings."
+                ),
             )
 
     def write(self, filepath: str | Path, content: str, append: bool = False) -> None:
-        """
-        filepath に content を utf-8 エンコーディングで書き込む。
-        指定したファイルが存在しない場合、新規作成する。
-        ファイルが存在する場合は上書きする。
-        上書きではなく追記したい場合は append を True にする。
+        """内容をUTF-8で書き込む。append=True なら追記モード。
 
-        Parameters
-        ----------
-        filepath : str | Path
-            書き込むファイルのパス
-        content : str
-            書き込む内容
-        append : bool, optional
-            追記モードで書き込むかどうか, by default False
+        Args:
+            filepath: 書き込み先のパス
+            content: 書き込むテキスト
+            append: 追記モードにする場合は True
         """
         if isinstance(filepath, str):
             filepath = Path(filepath)
@@ -102,13 +92,13 @@ class FileScribe:
 
     @property
     def filepath(self) -> Path:
-        """
-        このインスタンスが扱うファイルのパスを返す。
+        """このインスタンスが扱うファイルのパスを返す。
 
-        Returns
-        -------
-        Path
-            ファイルのパス
+        Returns:
+            Path: ファイルのパス
+
+        Raises:
+            ValueError: まだパスが設定されていない場合
         """
         if not hasattr(self, "_filepath"):
             raise ValueError("Attribute '_filepath' is not set.")
@@ -116,13 +106,13 @@ class FileScribe:
 
     @property
     def content(self) -> str:
-        """
-        読み込んだファイルの内容を文字列として返す。
+        """読み込んだファイルの内容を文字列として返す。
 
-        Returns
-        -------
-        str
-            ファイルの内容
+        Returns:
+            str: ファイルの内容
+
+        Raises:
+            ValueError: まだ内容が設定されていない場合
         """
         if not hasattr(self, "_content"):
             raise ValueError("Attribute '_content' is not set.")
@@ -130,13 +120,13 @@ class FileScribe:
 
     @property
     def encoding(self) -> str:
-        """
-        ファイルのエンコーディングを返す。
+        """ファイルのエンコーディングを返す。
 
-        Returns
-        -------
-        str
-            ファイルのエンコーディング
+        Returns:
+            str: ファイルのエンコーディング
+
+        Raises:
+            ValueError: まだエンコーディングが設定されていない場合
         """
         if not hasattr(self, "_encoding"):
             raise ValueError("Attribute '_encoding' is not set.")

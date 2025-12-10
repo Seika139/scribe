@@ -1,13 +1,18 @@
+#!/usr/bin/env python3
+# ruff: noqa: PLR1702, TRY301
+
 import base64
 import getpass
 import json
 import os
+import shutil
 import sys
 import zipfile
 from pathlib import Path
+from typing import cast
 
 import pathspec
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet, InvalidToken
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from pathspec.patterns.gitwildmatch import GitWildMatchPattern
@@ -17,15 +22,14 @@ def generate_key_from_password(
     password: bytes,
     salt: bytes | None = None,
 ) -> tuple[bytes, bytes]:
-    """
-    パスワードとソルトから暗号化キーを生成します。
+    """パスワードとソルトから暗号化キーを生成する。
 
     Args:
         password: パスワードのバイト列
-        salt: ソルトのバイト列（省略可能）
+        salt: ソルトのバイト列(省略可能)
 
     Returns:
-        生成されたキーとソルトのタプル
+        tuple[bytes, bytes]: 生成されたキーとソルト
     """
     if salt is None:
         salt = os.urandom(16)
@@ -42,11 +46,15 @@ def generate_key_from_password(
 
 
 def encrypt_file(input_path: Path, password: bytes) -> tuple[bytes, bytes]:
-    """ファイルを暗号化し、暗号化済みデータとソルトを返します。"""
+    """ファイルを暗号化し、暗号化済みデータとソルトを返す。
+
+    Returns:
+        tuple[bytes, bytes]: (salt, encrypted_data)
+    """
     salt = os.urandom(16)
     key, _ = generate_key_from_password(password, salt)
     f = Fernet(key)
-    with open(input_path, "rb") as input_file:
+    with Path(input_path).open("rb") as input_file:
         data = input_file.read()
     encrypted_data = f.encrypt(data)
     return salt, encrypted_data
@@ -61,36 +69,43 @@ def decrypt_file(
     """暗号化されたファイルを復号化します。"""
     key, _ = generate_key_from_password(password, salt)
     f = Fernet(key)
-    with open(input_path, "rb") as input_file:
+    with Path(input_path).open("rb") as input_file:
         encrypted_data = input_file.read()
     decrypted_data = f.decrypt(encrypted_data)
-    with open(output_path, "wb") as outfile:
+    with Path(output_path).open("wb") as outfile:
         outfile.write(decrypted_data)
 
 
 def load_gitignore_patterns(directory: Path) -> list[tuple[Path, GitWildMatchPattern]]:
-    """
-    指定ディレクトリの .gitignore を1行ずつ GitWildMatchPattern に変換し、
-    (ベースディレクトリ, パターン) のリストで返す。存在しなければ空リスト。
+    """指定ディレクトリの .gitignore を GitWildMatchPattern に変換する。
+
+    Returns:
+        list[tuple[Path, GitWildMatchPattern]]:
+            (ベースディレクトリ, パターン) のリスト。.gitignore が無ければ空。
     """
     gitignore_path = directory / ".gitignore"
     if not gitignore_path.is_file():
         return []
 
     patterns: list[tuple[Path, GitWildMatchPattern]] = []
-    with open(gitignore_path, encoding="utf-8") as f:
+    with Path(gitignore_path).open(encoding="utf-8") as f:
         # PathSpec を使って各行をパターン化し、pattern.include も保持する
         spec = pathspec.PathSpec.from_lines(GitWildMatchPattern, f)
-        patterns.extend((directory, p) for p in spec.patterns)
+        patterns.extend(
+            (directory, cast("GitWildMatchPattern", p)) for p in spec.patterns
+        )
     return patterns
 
 
 def is_ignored_by_gitignore(
     path: Path, patterns: list[tuple[Path, GitWildMatchPattern]]
 ) -> bool:
-    """
-    .gitignore の評価順に従い、最後にマッチしたルールで判定する。
+    """.gitignore の評価順に従い、最後にマッチしたルールで判定する。
+
     patterns は (その .gitignore が置かれたディレクトリ, パターン) の順序付きリスト。
+
+    Returns:
+        bool: True なら除外対象。
     """
     ignored = False
     for base_dir, pattern in patterns:
@@ -100,78 +115,77 @@ def is_ignored_by_gitignore(
             # base_dir の配下でなければスキップ
             continue
 
-        # ディレクトリ専用パターン（末尾スラッシュ）にもヒットするように末尾スラッシュ付きも試す
+        # ディレクトリ専用パターン(末尾スラッシュ)も拾うよう末尾スラッシュ付きで確認
         candidates = [relative_path]
         if path.is_dir():
             candidates.append(f"{relative_path}/")
 
         if any(pattern.match_file(candidate) for candidate in candidates):
-            # include=True は 「このパターンにマッチする」 という意味
-            # .gitignore の仕様では、マッチしたらその行の include (除外) or exclude (許可 - !) が適用される
-            # PathSpec の GitWildMatchPattern.include は、そのパターンが「除外ファイル(True)」か「除外しないファイル(False, !付き)」かを示す
-            ignored = pattern.include
+            # include=True は「このパターンにマッチする」を意味する
+            # .gitignore では後勝ち。True なら除外、False なら除外しない(!)。
+            ignored = bool(pattern.include)
     return ignored
 
 
 def encrypt_filename(filename: str, fernet: Fernet) -> str:
-    """
-    ファイル名を暗号化します。
+    """ファイル名を暗号化する。
 
     Args:
         filename: 暗号化するファイル名
         fernet: 暗号化に使用するFernetオブジェクト
 
     Returns:
-        暗号化されたファイル名（Fernetトークン）
+        str: 暗号化されたファイル名(Fernetトークン)
+
+    Raises:
+        ValueError: 暗号化に失敗した場合
     """
     try:
-        print(f"暗号化前のファイル名: {filename}")
+        print(f"📩 圧縮: {filename}")
         encrypted_bytes = fernet.encrypt(filename.encode("utf-8"))
         encrypted_name = encrypted_bytes.decode("ascii")
-        print(f"暗号化後のファイル名: {encrypted_name}")
-        return encrypted_name
     except Exception as e:
-        raise ValueError(
-            f"ファイル名の暗号化に失敗しました: {filename} ({str(e)})"
-        ) from e
+        raise ValueError(f"ファイル名の暗号化に失敗しました: {filename} ({e!s})") from e
+    return encrypted_name
 
 
 def decrypt_filename(encrypted_filename: str, fernet: Fernet) -> str:
-    """
-    暗号化されたファイル名を復号化します。
+    """暗号化されたファイル名を復号化する。
 
     Args:
-        encrypted_filename: 暗号化されたファイル名（Fernetトークン）
+        encrypted_filename: 暗号化されたファイル名(Fernetトークン)
         fernet: 復号化に使用するFernetオブジェクト
 
     Returns:
-        復号化されたファイル名
+        str: 復号化されたファイル名
+
+    Raises:
+        ValueError: 復号化に失敗した場合
     """
     try:
         print(f"復号化前のファイル名: {encrypted_filename}")
         decrypted_bytes = fernet.decrypt(encrypted_filename.encode("ascii"))
         decrypted_name = decrypted_bytes.decode("utf-8")
         print(f"復号化後のファイル名: {decrypted_name}")
-        return decrypted_name
     except Exception as e:
         raise ValueError(
-            f"ファイル名の復号化に失敗しました: {encrypted_filename} ({str(e)})"
+            f"ファイル名の復号化に失敗しました: {encrypted_filename} ({e!s})"
         ) from e
+    return decrypted_name
 
 
-def create_secure_encrypted_zip(
+def create_secure_encrypted_zip(  # noqa: PLR0912
     target: Path, zip_filename: Path | None = None, encrypt_filenames: bool = False
 ) -> Path:
-    """
-    指定されたファイルまたはディレクトリを、cryptographyライブラリで暗号化した上でZIPファイルとして作成します。
-    ファイル名とディレクトリ名も暗号化することができます。
-    出力ZIPファイル名を省略された場合は自動で命名し、既存ファイル名との重複を避けます。
-    .gitignore ファイルが存在する場合は、そのルールに従ってファイルを除外します。
+    """指定されたファイルやディレクトリを暗号化してZIPを作成する。
+
+    ファイル名の暗号化にも対応。出力名を省略した場合は自動命名し、既存と重複しないよう連番を付ける。
+    .gitignore がある場合はそのルールで除外する。
 
     Args:
         target: 圧縮対象のファイルまたはディレクトリのパス
-        zip_filename: 出力するZIPファイルのパス（省略可能）
-        encrypt_filenames: ファイル名を暗号化するかどうか（デフォルトはFalse）
+        zip_filename: 出力するZIPファイルのパス(省略可能)
+        encrypt_filenames: ファイル名を暗号化するかどうか(デフォルトはFalse)
 
     Returns:
         作成されたZIPファイルのパス
@@ -179,7 +193,6 @@ def create_secure_encrypted_zip(
     Raises:
         FileNotFoundError: 指定されたパスが存在しない場合
         ValueError: パスワードが一致しない場合、またはパスの種類が不正な場合
-        OSError: ファイルの読み書きに失敗した場合
     """
     if not target.exists():
         raise FileNotFoundError(f"指定されたパス '{target}' が見つかりません。")
@@ -202,7 +215,7 @@ def create_secure_encrypted_zip(
     metadata_key, _ = generate_key_from_password(password_bytes, metadata_salt)
     metadata_fernet = Fernet(metadata_key)
 
-    # 共通のソルトを生成（ファイルの暗号化に使用）
+    # ファイル暗号化で使う共通ソルト
     common_salt = os.urandom(16)
 
     if zip_filename is None:
@@ -227,9 +240,9 @@ def create_secure_encrypted_zip(
         zip_filename = zip_filename.resolve()
 
     try:
-        file_mapping: dict[str, str] = (
-            {}
-        )  # キー: 元のファイル名, 値: 暗号化されたファイル名
+        file_mapping: dict[
+            str, str
+        ] = {}  # キー: 元のファイル名, 値: 暗号化されたファイル名
 
         # 内部関数で再帰的に処理
         def _process_directory(
@@ -249,7 +262,7 @@ def create_secure_encrypted_zip(
             for item in current_path.iterdir():
                 # .gitignore で除外されているかチェック
                 if is_ignored_by_gitignore(item, current_patterns):
-                    print(f"除外: {item.relative_to(target)} (.gitignore に一致)")
+                    print(f"🚫 除外: {item.relative_to(target)} (.gitignore に一致)")
                     continue
 
                 if item.is_dir():
@@ -287,18 +300,14 @@ def create_secure_encrypted_zip(
                 salt, encrypted_bytes = encrypt_file(target, password_bytes)
                 zf.writestr(f"{encrypted_name}.salt", salt)
                 zf.writestr(f"{encrypted_name}.encrypted", encrypted_bytes)
-                print(
-                    f"ファイル '{target}' を '{zip_filename}' にパスワード付きで暗号化・圧縮しました。"
-                )
+                print(f"ファイル '{target}' を '{zip_filename}' に暗号化しました。")
             elif target.is_dir():
                 _process_directory(target, [], zf)
 
-                print(
-                    f"ディレクトリ '{target}' を '{zip_filename}' にパスワード付きで暗号化・圧縮しました。"
-                )
+                print(f"ディレクトリ '{target}' を '{zip_filename}' に暗号化しました。")
             else:
                 raise ValueError(
-                    f"指定されたパス '{target}' はファイルまたはディレクトリではありません。"
+                    f"指定パス '{target}' はファイルまたはディレクトリではありません。"
                 )
 
             # メタデータを暗号化して保存
@@ -312,32 +321,31 @@ def create_secure_encrypted_zip(
             zf.writestr("metadata.encrypted", encrypted_metadata)
             zf.writestr("metadata.salt", metadata_salt)
 
-        return zip_filename
-
     except Exception:
         # エラー発生時は作成途中のZIPファイルを削除
         if zip_filename and zip_filename.exists():
             zip_filename.unlink()
         raise
 
+    else:
+        return zip_filename
 
-def extract_secure_encrypted_zip(
+
+def extract_secure_encrypted_zip(  # noqa: C901, PLR0912
     zip_filepath: Path, extract_dir: Path | None = None
 ) -> None:
-    """
-    cryptographyライブラリで暗号化されたZIPファイルを指定したディレクトリに解凍し、復号化します。
-    ファイル名とディレクトリ名も復号化されます。
-    解凍先ディレクトリが省略された場合は、ZIPファイルと同じ場所に作成します。
+    """暗号化ZIPを解凍し、内容とファイル名を復号する。
+
+    解凍先を省略した場合は ZIP と同じ場所に作成する。
 
     Args:
         zip_filepath: 解凍するZIPファイルのパス
-        extract_dir: 解凍先ディレクトリのパス（省略可能）
+        extract_dir: 解凍先ディレクトリのパス(省略可能)
 
     Raises:
         FileNotFoundError: ZIPファイルが見つからない場合
         zipfile.BadZipFile: 無効なZIPファイルの場合
         ValueError: パスワードが間違っている場合、またはファイルが暗号化ZIPではない場合
-        OSError: ファイルの読み書きに失敗した場合
     """
     # 先にZIPファイルを検証
     if not zip_filepath.exists():
@@ -356,7 +364,7 @@ def extract_secure_encrypted_zip(
     except zipfile.BadZipFile:
         raise zipfile.BadZipFile(
             f"エラー: '{zip_filepath}' は有効なZIPファイルではありません。"
-        )
+        ) from None
 
     password = getpass.getpass(
         f"'{zip_filepath}' の解凍パスワードを入力してください: "
@@ -365,24 +373,25 @@ def extract_secure_encrypted_zip(
     if extract_dir is None:
         extract_dir = zip_filepath.parent / zip_filepath.stem.replace("_encrypted", "")
 
-    # 抽出されたファイルを追跡
-    extracted_files: set[Path] = set()
+    # 抽出処理中に「新規作成した」ファイル/ディレクトリだけを追跡
+    created_paths: set[Path] = set()
 
-    def cleanup_extracted_files() -> None:
-        """解凍処理中に作成されたファイルのみを削除"""
-        for file_path in extracted_files:
+    def cleanup_created_paths() -> None:
+        """新規作成物のみを削除し、既存資産は触らない"""
+        for file_path in sorted(
+            created_paths, key=lambda p: len(p.parts), reverse=True
+        ):
             if file_path.exists():
                 if file_path.is_file():
                     file_path.unlink()
                 else:
-                    import shutil
-
                     shutil.rmtree(file_path)
 
     try:
-        # ディレクトリが存在しない場合のみ作成
-        extract_dir.mkdir(parents=True, exist_ok=True)
-        extracted_files.add(extract_dir)
+        # extract_dir を新規作成した場合だけクリーンアップ対象にする
+        if not extract_dir.exists():
+            extract_dir.mkdir(parents=True, exist_ok=True)
+            created_paths.add(extract_dir)
 
         with zipfile.ZipFile(zip_filepath, "r") as zf:
             with zf.open("metadata.encrypted") as metadata_file:
@@ -404,7 +413,7 @@ def extract_secure_encrypted_zip(
                     metadata = json.loads(decrypted_metadata.decode("utf-8"))
                     common_salt = base64.b64decode(metadata["common_salt"])
                 except Exception as e:
-                    cleanup_extracted_files()
+                    cleanup_created_paths()
                     raise ValueError("エラー: パスワードが間違っています。") from e
 
                 # 共通のソルトでファイルを復号化
@@ -416,77 +425,75 @@ def extract_secure_encrypted_zip(
                     encrypted_filename = f"{encrypted_name}.encrypted"
                     salt_filename = f"{encrypted_name}.salt"
 
+                    # 必要なソルト/暗号ファイルが無ければ警告して次へ
                     if (
-                        salt_filename in zf.namelist()
-                        and encrypted_filename in zf.namelist()
+                        salt_filename not in zf.namelist()
+                        or encrypted_filename not in zf.namelist()
                     ):
-                        with zf.open(salt_filename) as salt_file:
-                            salt = salt_file.read()
+                        print(f"警告: ソルトまたはファイル欠落: {original_path}")
+                        continue
 
-                        # 暗号化されたファイルを一時的に保存
-                        temp_encrypted = extract_dir / "temp_encrypted"
+                    with zf.open(salt_filename) as salt_file:
+                        salt = salt_file.read()
 
-                        # Windows環境でもパスの区切り文字を統一するためにPosixパスを使用
-                        # original_pathがスラッシュを含む場合にWindowsでも正しく処理できるようにする
-                        norm_path = Path(original_path.replace("/", os.sep))
-                        output_file_path = extract_dir / norm_path
+                    # 暗号化されたファイルを一時的に保存
+                    temp_encrypted = extract_dir / "temp_encrypted"
 
-                        # 出力先のディレクトリを作成し、追跡リストに追加
+                    # Windows/Posix いずれの区切りでも正しく展開できるよう正規化
+                    normalized = original_path.replace("\\", "/").replace(
+                        "/", os.sep
+                    )
+                    norm_path = Path(normalized)
+                    output_file_path = extract_dir / norm_path
+
+                    # 出力先のディレクトリを作成し、追跡リストに追加
+                    if not output_file_path.parent.exists():
                         output_file_path.parent.mkdir(parents=True, exist_ok=True)
-                        extracted_files.add(output_file_path.parent)
+                        created_paths.add(output_file_path.parent)
 
+                    try:
                         with (
                             zf.open(encrypted_filename) as encrypted_file,
-                            open(temp_encrypted, "wb") as outfile,
+                            Path(temp_encrypted).open("wb") as outfile,
                         ):
                             outfile.write(encrypted_file.read())
-                        extracted_files.add(temp_encrypted)
+                        created_paths.add(temp_encrypted)
 
-                        try:
-                            decrypt_file(
-                                temp_encrypted,
-                                output_file_path,
-                                password,
-                                salt,
-                            )
-                            extracted_files.add(output_file_path)
-                            if os.path.exists(temp_encrypted):
-                                os.remove(temp_encrypted)
-                            print(f"'{original_path}' を復号化しました。")
-                        except Exception as e:
-                            if os.path.exists(temp_encrypted):
-                                os.remove(temp_encrypted)
-                            if "decrypt" in str(e) or "Invalid token" in str(e):
-                                cleanup_extracted_files()
-                                raise ValueError(
-                                    "エラー: パスワードが間違っています。"
-                                ) from e
-                            print(
-                                f"エラー: '{original_path}' の復号化に失敗しました。"
-                                f"原因: {type(e).__name__}: {str(e)}"
-                            )
-                            continue
-                    else:
-                        print(
-                            f"警告: ファイルまたはソルトが見つかりません: {original_path}"
+                        decrypt_file(
+                            temp_encrypted,
+                            output_file_path,
+                            password,
+                            salt,
                         )
+                        created_paths.add(output_file_path)
+                        print(f"✅ 復号完了: '{original_path}'")
+                    except Exception as e:
+                        if isinstance(e, InvalidToken) or "Invalid token" in str(e):
+                            cleanup_created_paths()
+                            raise ValueError(
+                                "エラー: パスワードが間違っています。"
+                            ) from e
+                    finally:
+                        if Path(temp_encrypted).exists():
+                            Path(temp_encrypted).unlink()
 
             except StopIteration:
-                cleanup_extracted_files()
+                cleanup_created_paths()
                 raise ValueError(
-                    "エラー: metadata.saltが見つかりません。ファイルが破損している可能性があります。"
-                )
+                    "エラー: metadata.saltが見つかりません。"
+                    "ファイル破損の可能性があります。"
+                ) from None
             except Exception as e:
-                cleanup_extracted_files()
+                cleanup_created_paths()
                 if isinstance(e, ValueError):
                     raise
                 raise ValueError("エラー: メタデータの復号化に失敗しました。") from e
 
     except (zipfile.BadZipFile, FileNotFoundError):
-        cleanup_extracted_files()
+        cleanup_created_paths()
         raise
     except Exception as e:
-        cleanup_extracted_files()
+        cleanup_created_paths()
         if isinstance(e, ValueError):
             raise
         raise ValueError(
@@ -516,25 +523,25 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "target",
-        help="圧縮対象のパス（-cの場合）またはZIPファイルのパス（-xの場合）",
+        help="圧縮対象のパス(-cの場合)またはZIPファイルのパス(-xの場合)",
     )
     parser.add_argument(
         "output",
         nargs="?",
-        help="出力先のパス（省略可能。-cの場合はZIPファイル名、-xの場合は解凍先ディレクトリ）",
+        help="出力先のパス(省略可能。-cの場合はZIPファイル名、-xの場合は解凍先ディレクトリ)",
     )
     parser.add_argument(
         "-e",
         "--encrypt-filenames",
         action="store_true",
-        help="ファイル名とディレクトリ名も暗号化する（-cの場合のみ有効）",
+        help="ファイル名とディレクトリ名も暗号化する(-cの場合のみ有効)",
     )
 
     args = parser.parse_args()
 
     try:
         if not args.operation:
-            parser.error("操作を指定してください（-c または -x）")
+            parser.error("操作を指定してください(-c または -x)")
 
         if args.operation == "create":
             target_path = Path(args.target).resolve()
@@ -556,6 +563,6 @@ if __name__ == "__main__":
                 extract_dir = Path(args.output).resolve()
             extract_secure_encrypted_zip(zip_filepath, extract_dir)
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         print(f"エラー: {e}")
         sys.exit(1)

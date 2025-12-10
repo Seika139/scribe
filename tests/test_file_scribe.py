@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from pathlib import Path
 
 import pytest
@@ -51,17 +52,17 @@ def test_write_append(tmp_path: Path) -> None:
 
 def test_filepath_property_not_set() -> None:
     scribe = FileScribe()
-    with pytest.raises(ValueError, match="Attribute '_filepath' is not set."):
+    with pytest.raises(ValueError, match=r"Attribute '_filepath' is not set."):
         _ = scribe.filepath
 
 
 def test_content_property_not_set() -> None:
     scribe = FileScribe()
-    with pytest.raises(ValueError, match="Attribute '_content' is not set."):
+    with pytest.raises(ValueError, match=r"Attribute '_content' is not set."):
         _ = scribe.content
 
 
 def test_encoding_property_not_set() -> None:
     scribe = FileScribe()
-    with pytest.raises(ValueError, match="Attribute '_encoding' is not set."):
+    with pytest.raises(ValueError, match=r"Attribute '_encoding' is not set."):
         _ = scribe.encoding
