@@ -42,7 +42,9 @@ jobs:
             --env-file "$GITHUB_ENV"
 
       - name: Set release date
-        run: echo "RELEASE_DATE=$(date -u +%Y-%m-%d)" >> "$GITHUB_ENV"
+        run: echo "RELEASE_DATE=$(date +%Y-%m-%d)" >> "$GITHUB_ENV"
+        env:
+          TZ: "Asia/Tokyo"
 
       - name: Validate version
         run: |
