@@ -1,4 +1,6 @@
 name: Lint Markdown
+permissions:
+  contents: write
 
 on:
   push:
