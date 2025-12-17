@@ -10,6 +10,7 @@
 ## Tagged Releases
 
 - [unreleased](https://github.com/Seika139/scribe/compare/v0.3.1...HEAD)
+- [1.0.0](https://github.com/Seika139/scribe/compare/v0.3.1...v1.0.0)
 - [0.3.1](https://github.com/Seika139/scribe/compare/v0.3.0...v0.3.1)
 - [0.3.0](https://github.com/Seika139/scribe/compare/v0.2.1...v0.3.0)
 - [0.2.1](https://github.com/Seika139/scribe/compare/v0.2.0...v0.2.1)
