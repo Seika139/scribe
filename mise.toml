@@ -190,7 +190,7 @@ shell = "bash -c"
 quiet = true
 depends = ["docker-up"]
 run = '''
-versions=("3.10" "3.11" "3.12" "3.13")
+versions=("3.11" "3.12" "3.13" "3.14")
 for version in ${versions[@]}; do
   printf "{{vars.text_cyan}}%s{{vars.text_reset}}\n" "=== Testing on Python $version ==="
   service=python_${version//./_}

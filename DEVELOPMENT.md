@@ -2,7 +2,7 @@
 
 ## Dependencies
 
-- `Python`: >=3.10, <=3.13
+- `Python`: >=3.11, <=3.14
 - `uv`: This project uses uv for dependency management.
 
 ## Recommended Packages
