@@ -1,4 +1,6 @@
 name: Qualify Code based on uv (reusable)
+permissions:
+  contents: read
 
 on:
   push:
