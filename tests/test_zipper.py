@@ -492,7 +492,7 @@ def test_filename_encryption_security() -> None:
             file_ext = original_name.split(".")[-1]
             assert file_ext not in encrypted_name
 
-        # 暗号化された名前がbase64エンコードされた形式であることを確認
+        # 暗号化された名前がbase64エンコードされた形式であることを確認する
         try:
             decoded = base64.urlsafe_b64decode(encrypted_name.encode("ascii"))
             # デコードされた内容に元の名前の一部が含まれていないことを確認

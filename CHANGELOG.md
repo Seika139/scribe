@@ -10,6 +10,7 @@
 ## Tagged Releases
 
 - [unreleased](https://github.com/Seika139/scribe/compare/v0.3.1...HEAD)
+- [1.0.0](https://github.com/Seika139/scribe/compare/v0.3.1...v1.0.0)
 - [0.3.1](https://github.com/Seika139/scribe/compare/v0.3.0...v0.3.1)
 - [0.3.0](https://github.com/Seika139/scribe/compare/v0.2.1...v0.3.0)
 - [0.2.1](https://github.com/Seika139/scribe/compare/v0.2.0...v0.2.1)
@@ -18,6 +19,24 @@
 - [0.1.0](https://github.com/Seika139/scribe/releases/tag/v0.1.0)
 
 ## [Unreleased]
+
+### Changed
+
+- ワークフローを共通化し、`markdownlint`を削除しました。
+- GitHub Actions のパーミッション設定を修正しました。
+- `update_readme_version.py`スクリプトを汎用化しました。
+- Dependabot の実行頻度を週次に変更しました。
+- リリース日時の表示を日本時間に変更しました。
+- README のバージョン自動更新をリリースワークフローに追加しました。
+- `mise check`の警告を解消しました。
+- `ci.yml`を削除しました。
+- `cryptography`ライブラリを`44.0.2`から`46.0.3`に更新しました。
+- Python 3.10 のサポートを終了します。
+
+### Fixed
+
+- コードスキャンアラート (Workflow does not contain permissions) を修正しました。
+- Linux 環境でのみ成功するテストが他の OS で実行されないよう修正しました。
 
 ## [1.0.0] - 2025-12-10
 
