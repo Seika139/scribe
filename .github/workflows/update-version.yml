@@ -1,4 +1,6 @@
 name: Update Version and Create Release Branch (reusable)
+permissions:
+  contents: read
 
 on:
   workflow_dispatch:
