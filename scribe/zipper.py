@@ -53,8 +53,7 @@ def encrypt_file(input_path: Path, password: bytes) -> tuple[bytes, bytes]:
     salt = os.urandom(16)
     key, _ = generate_key_from_password(password, salt)
     f = Fernet(key)
-    with Path(input_path).open("rb") as input_file:
-        data = input_file.read()
+    data = Path(input_path).read_bytes()
     encrypted_data = f.encrypt(data)
     return salt, encrypted_data
 
@@ -68,11 +67,9 @@ def decrypt_file(
     """暗号化されたファイルを復号化します。"""
     key, _ = generate_key_from_password(password, salt)
     f = Fernet(key)
-    with Path(input_path).open("rb") as input_file:
-        encrypted_data = input_file.read()
+    encrypted_data = Path(input_path).read_bytes()
     decrypted_data = f.decrypt(encrypted_data)
-    with Path(output_path).open("wb") as outfile:
-        outfile.write(decrypted_data)
+    Path(output_path).write_bytes(decrypted_data)
 
 
 def load_gitignore_patterns(directory: Path) -> list[tuple[Path, GitWildMatchPattern]]:
@@ -449,11 +446,8 @@ def extract_secure_encrypted_zip(  # noqa: C901, PLR0912
                         created_paths.add(output_file_path.parent)
 
                     try:
-                        with (
-                            zf.open(encrypted_filename) as encrypted_file,
-                            Path(temp_encrypted).open("wb") as outfile,
-                        ):
-                            outfile.write(encrypted_file.read())
+                        with zf.open(encrypted_filename) as encrypted_file:
+                            Path(temp_encrypted).write_bytes(encrypted_file.read())
                         created_paths.add(temp_encrypted)
 
                         decrypt_file(
