@@ -74,7 +74,7 @@ def decrypt_file(
 def load_gitignore_patterns(
     directory: Path,
 ) -> list[tuple[Path, Any]]:
-    """指定ディレクトリの .gitignore を GitWildMatchPattern に変換する。
+    """指定ディレクトリの .gitignore を pathspec パターンに変換する。
 
     Returns:
         list[tuple[Path, pathspec.pattern.Pattern]]:
