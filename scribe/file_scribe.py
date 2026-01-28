@@ -29,6 +29,7 @@ class FileScribe:
 
         # よく使われるエンコードでファイルの読み込みを試す
         encodings = ["utf-8", "utf-8-sig", "shift_jis", "ISO-8859-1"]
+        last_exception: Exception | None = None
         for encoding in encodings:
             try:
                 with self._filepath.open("r", encoding=encoding) as file:
