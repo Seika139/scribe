@@ -1,5 +1,5 @@
 ---
-name: Qualify Code based on uv (reusable)
+name: Qualify Code (reusable)
 
 permissions:
   contents: read
