@@ -1,9 +1,10 @@
-name: Qualify Code based on uv (reusable)
+---
+name: Qualify Code (reusable)
 
 permissions:
   contents: read
 
-on:
+"on":
   push:
   pull_request:
   workflow_dispatch:

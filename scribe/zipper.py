@@ -8,13 +8,12 @@ import shutil
 import sys
 import zipfile
 from pathlib import Path
-from typing import cast
+from typing import Any
 
 import pathspec
 from cryptography.fernet import Fernet, InvalidToken
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-from pathspec.patterns.gitwildmatch import GitWildMatchPattern
 
 
 def generate_key_from_password(
@@ -72,30 +71,28 @@ def decrypt_file(
     Path(output_path).write_bytes(decrypted_data)
 
 
-def load_gitignore_patterns(directory: Path) -> list[tuple[Path, GitWildMatchPattern]]:
-    """指定ディレクトリの .gitignore を GitWildMatchPattern に変換する。
+def load_gitignore_patterns(
+    directory: Path,
+) -> list[tuple[Path, Any]]:
+    """指定ディレクトリの .gitignore を pathspec パターンに変換する。
 
     Returns:
-        list[tuple[Path, GitWildMatchPattern]]:
+        list[tuple[Path, pathspec.pattern.Pattern]]:
             (ベースディレクトリ, パターン) のリスト。.gitignore が無ければ空。
     """
     gitignore_path = directory / ".gitignore"
     if not gitignore_path.is_file():
         return []
 
-    patterns: list[tuple[Path, GitWildMatchPattern]] = []
+    patterns: list[tuple[Path, Any]] = []
     with Path(gitignore_path).open(encoding="utf-8") as f:
         # PathSpec を使って各行をパターン化し、pattern.include も保持する
-        spec = pathspec.PathSpec.from_lines(GitWildMatchPattern, f)
-        patterns.extend(
-            (directory, cast("GitWildMatchPattern", p)) for p in spec.patterns
-        )
+        spec = pathspec.PathSpec.from_lines("gitignore", f)
+        patterns.extend((directory, p) for p in spec.patterns)
     return patterns
 
 
-def is_ignored_by_gitignore(
-    path: Path, patterns: list[tuple[Path, GitWildMatchPattern]]
-) -> bool:
+def is_ignored_by_gitignore(path: Path, patterns: list[tuple[Path, Any]]) -> bool:
     """.gitignore の評価順に従い、最後にマッチしたルールで判定する。
 
     patterns は (その .gitignore が置かれたディレクトリ, パターン) の順序付きリスト。
@@ -243,7 +240,7 @@ def create_secure_encrypted_zip(  # noqa: PLR0912
         # 内部関数で再帰的に処理
         def _process_directory(
             current_path: Path,
-            parent_patterns: list[tuple[Path, GitWildMatchPattern]],
+            parent_patterns: list[tuple[Path, Any]],
             zf: zipfile.ZipFile,
         ) -> None:
             # .git ディレクトリは除外

@@ -1,10 +1,11 @@
-name: Update Version and Create Release Branch (reusable)
+---
+name: Update Version (reusable)
 
 permissions:
   contents: write
   pull-requests: write
 
-on:
+"on":
   workflow_dispatch:
     inputs:
       version_bump:

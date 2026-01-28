@@ -92,8 +92,40 @@ printf "{{vars.text_yellow}}%s{{vars.text_reset}}\n" "Running ruff check..."
 {{vars.uv}} run ruff check .
 printf "{{vars.text_yellow}}%s{{vars.text_reset}}\n" "Running mypy..."
 {{vars.uv}} run mypy .
+
+printf "{{vars.text_yellow}}%s{{vars.text_reset}}\n" "Running ty check..."
+{{vars.uv}} run ty check .
+printf "{{vars.text_yellow}}%s{{vars.text_reset}}\n" "Running vulture..."
+targets=()
+if [ -d "src" ]; then targets+=("src"); fi
+if [ -d "tests" ]; then targets+=("tests"); fi
+if [ {% raw %}${#targets[@]}{% endraw %} -eq 0 ]; then
+  targets+=(".")
+fi
+whitelist_paths=""
+if [ -f vulture/whitelists/local.py ]; then
+  whitelist_paths="vulture/whitelists/local.py"
+fi
+{{vars.uv}} run vulture --min-confidence 90 --exclude alembic "${targets[@]}" $whitelist_paths
 printf "{{vars.text_yellow}}%s{{vars.text_reset}}\n" "Running pytest..."
 {{vars.uv}} run pytest tests/
+printf "{{vars.text_yellow}}%s{{vars.text_reset}}\n" "Running yamllint..."
+{{vars.uv}} run yamllint . # .yamllint.yml は自動的に読み込まれる
+
+if command -v shellcheck >/dev/null 2>&1; then
+  printf "{{vars.text_yellow}}%s{{vars.text_reset}}\n" "Running shellcheck..."
+  shellcheck_files=()
+  while IFS= read -r -d '' file; do
+    shellcheck_files+=("$file")
+  done < <(find . -type f \( -name "*.sh" -o -name "*.bash" \) -not -path "./.venv/*" -not -path "./node_modules/*" -not -path "./.git/*" -print0)
+  if [ "${shellcheck_files[0]+_}" ]; then
+    shellcheck -x -P SCRIPTDIR "${shellcheck_files[@]}"
+  else
+    printf "{{vars.text_yellow}}%s{{vars.text_reset}}\n" "No shell scripts found; skipping shellcheck."
+  fi
+else
+  printf "{{vars.text_red}}%s{{vars.text_reset}}\n" "shellcheck is not installed; skipping shell script linting."
+fi
 '''
 
 [tasks.format]
