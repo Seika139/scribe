@@ -99,7 +99,7 @@ printf "{{vars.text_yellow}}%s{{vars.text_reset}}\n" "Running vulture..."
 targets=()
 if [ -d "src" ]; then targets+=("src"); fi
 if [ -d "tests" ]; then targets+=("tests"); fi
-if [ ${#targets[@]} -eq 0 ]; then
+if [ {% raw %}${#targets[@]}{% endraw %} -eq 0 ]; then
   targets+=(".")
 fi
 whitelist_paths=""
