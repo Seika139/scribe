@@ -1,4 +1,5 @@
 import os
+import re
 from pathlib import Path
 
 import pytest
@@ -52,11 +53,20 @@ def test_get_matching_files(test_directory: Path) -> None:
     matching_none = get_matching_files(str(test_directory), r"\.csv$")
     assert len(matching_none) == 0
 
-    # 存在しないディレクトリを指定した場合
+    # 存在しないパスを指定した場合
     non_existent_dir = test_directory / "non_existent"
-    result = get_matching_files(str(non_existent_dir), r".*")
-    assert len(result) == 0
-    # エラーメッセージの出力を捕捉してテストすることも可能ですが、ここでは割愛します
+    with pytest.raises(FileNotFoundError):
+        get_matching_files(str(non_existent_dir), r".*")
+
+    # 存在するがディレクトリではないパスを指定した場合
+    not_a_directory = test_directory / "not_a_dir.txt"
+    not_a_directory.touch()
+    with pytest.raises(NotADirectoryError):
+        get_matching_files(str(not_a_directory), r".*")
+
+    # 不正な正規表現を指定した場合
+    with pytest.raises(re.error):
+        get_matching_files(str(test_directory), r"[invalid")
 
 
 def test_sort_files_by_name(test_directory: Path) -> None:

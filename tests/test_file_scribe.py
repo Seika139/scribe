@@ -49,6 +49,25 @@ def test_write_append(tmp_path: Path) -> None:
     assert test_file.read_text(encoding="utf-8") == "Initial content. Appended content."
 
 
+def test_write_append_after_read_keeps_content_consistent(tmp_path: Path) -> None:
+    """Read 後に append=True で書き込んでも content が実体と一致すること。"""
+    test_file: Path = tmp_path / "append_after_read.txt"
+    test_file.write_text("Initial.", encoding="utf-8")
+    scribe = FileScribe()
+    scribe.read(test_file).write(test_file, " Added.", append=True)
+    assert scribe.content == test_file.read_text(encoding="utf-8")
+    assert scribe.content == "Initial. Added."
+
+
+def test_write_append_without_prior_content(tmp_path: Path) -> None:
+    """Read していない状態で append=True を呼んでも例外なく動作すること。"""
+    test_file: Path = tmp_path / "append_new.txt"
+    scribe = FileScribe()
+    scribe.write(test_file, "first", append=True)
+    assert scribe.content == "first"
+    assert test_file.read_text(encoding="utf-8") == "first"
+
+
 def test_filepath_property_not_set() -> None:
     scribe = FileScribe()
     with pytest.raises(ValueError, match=r"Attribute '_filepath' is not set."):
