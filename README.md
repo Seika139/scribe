@@ -22,26 +22,25 @@
 
 ## Installation
 
-poetry を利用してこのパッケージを利用する場合は以下のコマンドを実行してください。
-uv を利用している場合も同様に poetry を uv に置き換えて実行してください。
+uv を利用してこのパッケージをインストールする場合は以下のコマンドを実行してください。
 
 ```bash
-poetry add git+https://github.com/Seika139/scribe.git
+uv add git+https://github.com/Seika139/scribe.git
 ```
 
 特定のバージョンやコミットを指定してインストールすることも可能です。
 
 ```bash
 # 特定のバージョンを指定する場合
-poetry add git+https://github.com/Seika139/scribe.git@v0.2.1
+uv add git+https://github.com/Seika139/scribe.git@v1.0.1
 # 特定のコミットを指定する場合
-poetry add git+https://github.com/Seika139/scribe.git@<commit_hash>
+uv add git+https://github.com/Seika139/scribe.git@<commit_hash>
 ```
 
 ## Usage
 
 ```python
-from scribe.file_scribe import FileScribe
+from scribe import FileScribe
 
 # ファイルを読み込む場合
 file_scribe = FileScribe().read("path/to/file.txt")
@@ -67,6 +66,21 @@ file_scribe = FileScribe().write(
 print(file_scribe.filepath) # ファイルのパスを返します (Path)
 print(file_scribe.encoding) # ファイルのエンコーディングを返します (str)
 print(file_scribe.content) # ファイルの内容を返します (str)
+```
+
+### file_sorter
+
+```python
+from scribe import get_matching_files, sort_files_by_name, sort_files_by_mtime
+
+# 正規表現に合致するファイルを取得
+files = get_matching_files("/path/to/dir", r"\.csv$")
+
+# ファイル名でソート
+sorted_files = sort_files_by_name(files)
+
+# 更新日時でソート(新しい順)
+recent_files = sort_files_by_mtime(files, reverse=True)
 ```
 
 ## Changelog

@@ -54,9 +54,8 @@ def test_get_matching_files(test_directory: Path) -> None:
 
     # 存在しないディレクトリを指定した場合
     non_existent_dir = test_directory / "non_existent"
-    result = get_matching_files(str(non_existent_dir), r".*")
-    assert len(result) == 0
-    # エラーメッセージの出力を捕捉してテストすることも可能ですが、ここでは割愛します
+    with pytest.raises(NotADirectoryError):
+        get_matching_files(str(non_existent_dir), r".*")
 
 
 def test_sort_files_by_name(test_directory: Path) -> None:

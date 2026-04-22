@@ -11,11 +11,14 @@ def get_matching_files(dir_path_str: str, regex: str) -> list[Path]:
 
     Returns:
         正規表現に合致する Path のリスト。見つからない場合は空。
+
+    Raises:
+        NotADirectoryError: 指定されたパスがディレクトリではない場合。
     """
     dir_path = Path(dir_path_str)
     if not dir_path.is_dir():
-        print(f"エラー: 指定されたパス '{dir_path_str}' はディレクトリではありません。")
-        return []
+        msg = f"指定されたパス '{dir_path_str}' はディレクトリではありません。"
+        raise NotADirectoryError(msg)
 
     return [
         entry
