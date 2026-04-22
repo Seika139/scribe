@@ -21,6 +21,21 @@
 
 ## [Unreleased]
 
+### Changed
+
+- `FileScribe.read()` / `write()` が自身のインスタンスを返すようになり、メソッドチェーンが可能に
+- `file_scribe.py` 内の `print` を `logging` に変更
+- `file_sorter.py` の `get_matching_files` でディレクトリが無効な場合に `NotADirectoryError` を送出するように変更
+- `__init__.py` で `FileScribe`, `get_matching_files`, `sort_files_by_name`, `sort_files_by_mtime` を re-export
+- `pyproject.toml` の `known-first-party` を `scribe` に修正
+- README のインストール手順を uv に統一し、Usage に `file_sorter` の例を追加
+
+### Removed
+
+- 暗号化 ZIP 機能 (`zipper.py`) を [zipper](https://github.com/Seika139/zipper) リポジトリに分離
+- `cryptography`, `pathspec` の依存を削除
+- `mise.toml` から `encrypt` / `decrypt` タスクを削除
+
 ## [1.0.1] - 2025-12-18
 
 ### Changed

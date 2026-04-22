@@ -1,4 +1,7 @@
+import logging
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 
 class FileScribe:
@@ -7,13 +10,16 @@ class FileScribe:
     Scribe は日本語で「書記官」を意味する。
     """
 
-    def read(self, filepath: str | Path) -> None:
+    def read(self, filepath: str | Path) -> "FileScribe":
         """複数エンコーディング(utf-8/shift_jis/ISO-8859-1)で読み込みを試行する。
 
         読み込めた内容を `self._content` に格納し、失敗時は例外を送出する。
 
         Args:
             filepath: 読み込むファイルのパス
+
+        Returns:
+            FileScribe: 自身のインスタンス(メソッドチェーン用)
 
         Raises:
             FileNotFoundError: ファイルが見つからない場合
@@ -37,7 +43,7 @@ class FileScribe:
                     self._encoding: str = encoding
                     break
             except UnicodeDecodeError as e:
-                print(f"Failed to read the file with encoding: {encoding}")
+                logger.debug("Failed to read the file with encoding: %s", encoding)
                 last_exception = e
                 continue  # 次のエンコーディングを試す
         else:
@@ -69,14 +75,20 @@ class FileScribe:
                     "ISO-8859-1 encodings."
                 ),
             )
+        return self
 
-    def write(self, filepath: str | Path, content: str, append: bool = False) -> None:
+    def write(
+        self, filepath: str | Path, content: str, append: bool = False
+    ) -> "FileScribe":
         """内容をUTF-8で書き込む。append=True なら追記モード。
 
         Args:
             filepath: 書き込み先のパス
             content: 書き込むテキスト
             append: 追記モードにする場合は True
+
+        Returns:
+            FileScribe: 自身のインスタンス(メソッドチェーン用)
         """
         if isinstance(filepath, str):
             filepath = Path(filepath)
@@ -89,6 +101,7 @@ class FileScribe:
         with self._filepath.open(mode, encoding=self._encoding) as file:
             file.write(content)
         self._content = content
+        return self
 
     @property
     def filepath(self) -> Path:

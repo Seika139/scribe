@@ -1,3 +1,6 @@
+[settings]
+env_shell_expand = false
+
 [vars]
 python_version = "$(cat .python-version 2>/dev/null || echo 'Error: .python-version not found')"
 uv = 'uv'
@@ -145,35 +148,6 @@ run = '''
 {{vars.uv}} run ruff clean
 '''
 
-#######################
-# Encrypt And Decrypt #
-#######################
-
-[tasks.encrypt]
-description = "ファイル・フォルダを暗号化します"
-shell = "bash -c"
-quiet = true
-run = '''
-TARGET={{arg(name="target", description="暗号化するフォルダのパス")}}
-if [[ ! -e "$TARGET" ]]; then
-  echo "Error: target '$TARGET' is not a file or directory"
-  exit 1
-fi
-{{vars.uv}} run python scribe/zipper.py -e -c "$TARGET"
-'''
-
-[tasks.decrypt]
-description = "ファイル・フォルダを復号化します"
-shell = "bash -c"
-quiet = true
-run = '''
-TARGET={{arg(name="target", description="復号化するフォルダのパス")}}
-if [[ ! -e "$TARGET" ]]; then
-  echo "Error: target '$TARGET' is not a file or directory"
-  exit 1
-fi
-{{vars.uv}} run python scribe/zipper.py -x "$TARGET"
-'''
 
 ################################################
 # Multiple Python Version Support using Docker #
