@@ -63,9 +63,9 @@ file_scribe = FileScribe().write(
 )
 
 # プロパティ
-print(file_scribe.filepath) # ファイルのパスを返します (Path)
-print(file_scribe.encoding) # ファイルのエンコーディングを返します (str)
-print(file_scribe.content) # ファイルの内容を返します (str)
+print(file_scribe.filepath)  # ファイルのパスを返します (Path)
+print(file_scribe.encoding)  # ファイルのエンコーディングを返します (str)
+print(file_scribe.content)  # ファイルの内容を返します (str)
 ```
 
 ### file_sorter
