@@ -100,7 +100,10 @@ class FileScribe:
         self._encoding = "utf-8"
         with self._filepath.open(mode, encoding=self._encoding) as file:
             file.write(content)
-        self._content = content
+        if append and hasattr(self, "_content"):
+            self._content += content
+        else:
+            self._content = content
         return self
 
     @property

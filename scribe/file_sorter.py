@@ -7,23 +7,28 @@ def get_matching_files(dir_path_str: str, regex: str) -> list[Path]:
 
     Args:
         dir_path_str: 検索するディレクトリのパス。
-        regex: ファイル名をマッチさせる正規表現。
+        regex: ファイル名をマッチさせる正規表現。不正な場合は `re.error` が送出される。
 
     Returns:
         正規表現に合致する Path のリスト。見つからない場合は空。
 
     Raises:
-        NotADirectoryError: 指定されたパスがディレクトリではない場合。
+        FileNotFoundError: 指定されたパスが存在しない場合。
+        NotADirectoryError: 指定されたパスが存在するがディレクトリではない場合。
     """
     dir_path = Path(dir_path_str)
+    if not dir_path.exists():
+        msg = f"指定されたパス '{dir_path_str}' は存在しません。"
+        raise FileNotFoundError(msg)
     if not dir_path.is_dir():
         msg = f"指定されたパス '{dir_path_str}' はディレクトリではありません。"
         raise NotADirectoryError(msg)
+    pattern = re.compile(regex)
 
     return [
         entry
         for entry in dir_path.iterdir()
-        if entry.is_file() and re.search(regex, entry.name)
+        if entry.is_file() and pattern.search(entry.name)
     ]
 
 
