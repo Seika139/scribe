@@ -19,10 +19,10 @@ build-backend = "hatchling.build"
 
 [dependency-groups]
 dev = [
-    "mypy>=2.2.0,<3",
+    "mypy>=2.3.0,<3",
     "pytest>=9.1.1",
-    "ruff>=0.15.21",
-    "ty>=0.0.59",
+    "ruff>=0.15.22",
+    "ty>=0.0.62",
     "vulture>=2.14",
     "yamllint>=1.38.0",
 ]
@@ -41,33 +41,33 @@ preview = true
 [tool.ruff.lint]
 select = ["ALL"]
 ignore = [
-  "CPY001",
-  "COM812",
+  "missing-copyright-notice",
+  "missing-trailing-comma",
   # D系(Docstring)のポリシーは外部公開する部分は unignore していきたい
-  "D100",
-  "D101",
-  "D102",
-  "D103",
-  "D105",
-  "D107",
-  "D203",    # D211 と競合するため無効化
-  "D213",    # D212 と競合するため無効化
-  "D415",
-  "EM101",
-  "EM102",
-  "FBT001",
-  "FBT002",
-  "FBT003",
-  "PLR0911",
-  "PLR0914",
-  "PLR0915",
-  "PLR2004",
-  "PLR6301",
-  "T201",
-  "TC001",
-  "TC002",
-  "TC003",
-  "TRY003",
+  "undocumented-public-module",
+  "undocumented-public-class",
+  "undocumented-public-method",
+  "undocumented-public-function",
+  "undocumented-magic-method",
+  "undocumented-public-init",
+  "incorrect-blank-line-before-class",    # D211 と競合するため無効化
+  "multi-line-summary-second-line",    # D212 と競合するため無効化
+  "missing-terminal-punctuation",
+  "raw-string-in-exception",
+  "f-string-in-exception",
+  "boolean-type-hint-positional-argument",
+  "boolean-default-value-positional-argument",
+  "boolean-positional-value-in-call",
+  "too-many-return-statements",
+  "too-many-locals",
+  "too-many-statements",
+  "magic-value-comparison",
+  "no-self-use",
+  "print",
+  "typing-only-first-party-import",
+  "typing-only-third-party-import",
+  "typing-only-standard-library-import",
+  "raise-vanilla-args",
 ]
 
 [tool.ruff.lint.flake8-tidy-imports]
@@ -80,8 +80,8 @@ max-complexity = 20
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = [
-  "S101",   # Allow use of assert statements in tests
-  "SLF001", # Allow use private members in tests
+  "assert",   # Allow use of assert statements in tests
+  "private-member-access", # Allow use private members in tests
 ]
 
 [tool.ruff.lint.isort]
